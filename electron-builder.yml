@@ -1,0 +1,22 @@
+appId: com.biofucker.app
+productName: BioFucker
+directories:
+  output: dist
+  buildResources: assets
+asar: false
+files:
+  - build
+  - ".next/standalone/**/*"
+  - ".next/standalone/**/node_modules/**"
+win:
+  target: nsis
+  icon: resources/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  icon: resources/icon.icns
+linux:
+  target: AppImage
+  icon: resources/icon.png
