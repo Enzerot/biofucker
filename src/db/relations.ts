@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { dailyEntries, supplementsTaken, supplements, tags, supplementTags } from "../src/db/schema";
+import { dailyEntries, supplementsTaken, supplements, tags, supplementTags } from "../../drizzle/schema";
 
 export const supplementsTakenRelations = relations(supplementsTaken, ({one}) => ({
 	dailyEntry: one(dailyEntries, {

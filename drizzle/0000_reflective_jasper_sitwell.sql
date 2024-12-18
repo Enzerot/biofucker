@@ -1,4 +1,6 @@
-
+-- Current sql file was generated after introspecting the database
+-- If you want to run this migration please uncomment this code before executing migrations
+/*
 CREATE TABLE `daily_entries` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`date` integer NOT NULL,
@@ -35,7 +37,5 @@ CREATE TABLE `supplement_tags` (
 	FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`supplement_id`) REFERENCES `supplements`(`id`) ON UPDATE no action ON DELETE cascade
 );
---> statement-breakpoint
-CREATE TABLE `__drizzle_migrations` (
 
-);
+*/

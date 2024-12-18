@@ -160,6 +160,7 @@ export async function getDailyEntry(
         description: supplements.description,
         hidden: supplements.hidden,
         averageRating: supplements.averageRating,
+        ratingDifference: supplements.ratingDifference,
       },
     })
     .from(supplementsTaken)
@@ -217,6 +218,7 @@ export async function getDailyEntries(): Promise<DailyEntry[] | any[]> {
               description: supplements.description,
               hidden: supplements.hidden,
               averageRating: supplements.averageRating,
+              ratingDifference: supplements.ratingDifference,
             },
           })
           .from(supplementsTaken)
@@ -251,7 +253,7 @@ export async function getDailyEntries(): Promise<DailyEntry[] | any[]> {
 
 async function updateSupplementRatings(supplementIds: number[]) {
   for (const id of supplementIds) {
-    const result = await db
+    const withSupplementResult = await db
       .select({
         avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
       })
@@ -263,11 +265,32 @@ async function updateSupplementRatings(supplementIds: number[]) {
       .where(eq(supplementsTaken.supplementId, id))
       .get();
 
-    if (result) {
+    const withoutSupplementResult = await db
+      .select({
+        avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
+      })
+      .from(dailyEntries)
+      .leftJoin(
+        supplementsTaken,
+        sql`${supplementsTaken.entryId} = ${dailyEntries.id} AND ${supplementsTaken.supplementId} = ${id}`
+      )
+      .where(sql`${supplementsTaken.entryId} IS NULL`)
+      .get();
+
+    const avgWithSupplement = withSupplementResult?.avgRating ?? null;
+    const avgWithoutSupplement = withoutSupplementResult?.avgRating ?? null;
+
+    const ratingDifference =
+      avgWithSupplement !== null && avgWithoutSupplement !== null
+        ? Number((avgWithSupplement - avgWithoutSupplement).toFixed(1))
+        : null;
+
+    if (avgWithSupplement !== null) {
       await db
         .update(supplements)
         .set({
-          averageRating: result.avgRating,
+          averageRating: avgWithSupplement,
+          ratingDifference: ratingDifference,
         })
         .where(eq(supplements.id, id));
     }
@@ -315,11 +338,26 @@ export async function toggleSupplementVisibility(
 }
 
 export async function deleteDailyEntry(id: number): Promise<void> {
+  // Получаем список добавок, которые были в этот день
+  const supplementsInEntry = await db
+    .select({
+      supplementId: supplementsTaken.supplementId,
+    })
+    .from(supplementsTaken)
+    .where(eq(supplementsTaken.entryId, id));
+
   // Сначала удаляем все связи с добавками
   await db.delete(supplementsTaken).where(eq(supplementsTaken.entryId, id));
 
   // Затем удаляем саму запись
   await db.delete(dailyEntries).where(eq(dailyEntries.id, id));
+
+  // Обновляем рейтинги всех добавок, которые были в удаленном дне
+  await updateSupplementRatings(
+    supplementsInEntry
+      .map((s) => s.supplementId)
+      .filter((id): id is number => id !== null)
+  );
 }
 
 export async function getTags(): Promise<Tag[]> {

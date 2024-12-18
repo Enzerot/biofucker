@@ -54,9 +54,11 @@ export default function SupplementStats({
   onEdit,
 }: SupplementStatsProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-  const [chartSupplement, setChartSupplement] = useState<Supplement | null>(null);
+  const [chartSupplement, setChartSupplement] = useState<Supplement | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortType, setSortType] = useState("rating");
+  const [sortType, setSortType] = useState("difference");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const { showNotification } = useNotification();
@@ -88,7 +90,7 @@ export default function SupplementStats({
     try {
       await toggleSupplementVisibility(supplement.id);
       showNotification(
-        supplement.hidden ? "Добавка показана" : "Добавка скрыта"
+        supplement.hidden ? "Добавка п��казана" : "Добавка скрыта"
       );
       onSuccess();
     } catch (error) {
@@ -106,7 +108,7 @@ export default function SupplementStats({
   const handleClearFilters = () => {
     setSearchQuery("");
     setSelectedTags([]);
-    setSortType("rating");
+    setSortType("difference");
   };
 
   const filteredAndSortedSupplements = supplements
@@ -129,6 +131,16 @@ export default function SupplementStats({
     })
     .sort((a, b) => {
       switch (sortType) {
+        case "difference":
+          return (
+            (b.ratingDifference ?? 0) - (a.ratingDifference ?? 0) ||
+            a.name.localeCompare(b.name)
+          );
+        case "difference_asc":
+          return (
+            (a.ratingDifference ?? 0) - (b.ratingDifference ?? 0) ||
+            a.name.localeCompare(b.name)
+          );
         case "rating":
           return (
             (b.averageRating ?? 0) - (a.averageRating ?? 0) ||
@@ -183,7 +195,7 @@ export default function SupplementStats({
                   visibility:
                     searchQuery ||
                     selectedTags.length > 0 ||
-                    sortType !== "rating"
+                    sortType !== "difference"
                       ? "visible"
                       : "hidden",
                 }}
@@ -222,7 +234,9 @@ export default function SupplementStats({
                 >
                   <MenuItem value="rating">По рейтингу (↓)</MenuItem>
                   <MenuItem value="rating_asc">По рейтингу (↑)</MenuItem>
-                  <MenuItem value="name">По наз��анию (А-Я)</MenuItem>
+                  <MenuItem value="difference">По разнице (↓)</MenuItem>
+                  <MenuItem value="difference_asc">По разнице (↑)</MenuItem>
+                  <MenuItem value="name">По названию (А-Я)</MenuItem>
                   <MenuItem value="name_desc">По названию (Я-А)</MenuItem>
                   <MenuItem value="tags">По количеству тегов (↓)</MenuItem>
                   <MenuItem value="tags_asc">По количеству тегов (↑)</MenuItem>
@@ -289,7 +303,7 @@ export default function SupplementStats({
                   <Typography
                     variant="subtitle1"
                     component="h3"
-                    sx={{ fontWeight: "medium" }}
+                    sx={{ fontWeight: "medium", mr: 2 }}
                   >
                     {supplement.name}
                   </Typography>
@@ -300,6 +314,32 @@ export default function SupplementStats({
                       color="primary"
                       variant="outlined"
                     />
+                  )}
+                  {!!supplement.ratingDifference && (
+                    <Tooltip
+                      title={`Разница в рейтинге между днями с добавкой и без неё: ${
+                        supplement.ratingDifference > 0 ? "+" : ""
+                      }${supplement.ratingDifference.toFixed(1)}`}
+                    >
+                      <Chip
+                        label={
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <span style={{ marginRight: 4 }}>
+                              {supplement.ratingDifference > 0 ? "↗" : "↘"}
+                            </span>
+                            <span>
+                              {Math.abs(supplement.ratingDifference).toFixed(1)}
+                            </span>
+                          </Box>
+                        }
+                        size="small"
+                        color={
+                          supplement.ratingDifference > 0 ? "success" : "error"
+                        }
+                        variant="outlined"
+                        sx={{ ml: 0.5 }}
+                      />
+                    </Tooltip>
                   )}
                 </Box>
                 {supplement.description && (
@@ -415,9 +455,7 @@ export default function SupplementStats({
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          График оценок: {chartSupplement?.name}
-        </DialogTitle>
+        <DialogTitle>График оценок: {chartSupplement?.name}</DialogTitle>
         <DialogContent>
           {chartSupplement && (
             <SupplementChart
@@ -427,9 +465,7 @@ export default function SupplementStats({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setChartSupplement(null)}>
-            Закрыть
-          </Button>
+          <Button onClick={() => setChartSupplement(null)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
     </Card>

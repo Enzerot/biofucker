@@ -157,13 +157,19 @@ export default function AddEntry({
 
   // Заполнение формы при монтировании или изменении editEntry
   useEffect(() => {
+    const prepareSupplements = (supplements: { supplement: Supplement }[]) => {
+      return supplements
+        .filter((s) => !s.supplement.hidden)
+        .map((s) => s.supplement.id);
+    };
+
     if (editEntry) {
       const entryDate = startOfDay(new Date(editEntry.date));
       reset({
         date: entryDate,
         rating: editEntry.rating,
         notes: editEntry.notes || "",
-        supplements: editEntry.supplements.map((s) => s.supplement.id),
+        supplements: prepareSupplements(editEntry.supplements),
       });
     } else {
       const todayEntry = findEntryByDate(date);
@@ -173,16 +179,14 @@ export default function AddEntry({
           date,
           rating: todayEntry.rating,
           notes: todayEntry.notes || "",
-          supplements: todayEntry.supplements.map((s) => s.supplement.id),
+          supplements: prepareSupplements(todayEntry.supplements),
         });
       } else {
         reset({
           date,
           rating: 5,
           notes: "",
-          supplements: lastEntry
-            ? lastEntry.supplements.map((s) => s.supplement.id)
-            : [],
+          supplements: prepareSupplements(lastEntry?.supplements || []),
         });
       }
     }

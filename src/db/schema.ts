@@ -16,6 +16,7 @@ export const supplements = sqliteTable("supplements", {
   averageRating: integer("average_rating"),
   createdAt: integer("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   hidden: integer().default(0).notNull(),
+  ratingDifference: integer("rating_difference").default(0),
 });
 
 export const supplementsTaken = sqliteTable("supplements_taken", {

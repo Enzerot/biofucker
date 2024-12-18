@@ -4,6 +4,7 @@ export interface Supplement {
   description: string | null;
   hidden: number;
   averageRating: number | null;
+  ratingDifference: number | null;
   tags: Tag[];
 }
 
