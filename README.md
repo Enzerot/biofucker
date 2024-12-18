@@ -4,10 +4,16 @@
 - yarn (`npm i -g yarn`)
 
 
-Генерация БД:
+Генерация БД/миграций:
 
 ```bash
 yarn db:generate
+```
+
+Миграции:
+
+```bash
+yarn db:migrate
 ```
 
 Установка зависимостей:

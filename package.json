@@ -6,6 +6,7 @@
   "main": "build/index.js",
   "scripts": {
     "db:generate": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
     "clean": "rimraf build dist .tscache .next out",
     "build": "yarn clean && yarn build:next && yarn build:ts && yarn build:electron",
     "build:ts": "tsc --project tsconfig-electron.json",
