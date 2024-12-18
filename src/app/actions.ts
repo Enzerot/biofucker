@@ -265,6 +265,33 @@ async function updateSupplementRatings(supplementIds: number[]) {
       .where(eq(supplementsTaken.supplementId, id))
       .get();
 
+    const avgWithSupplement = withSupplementResult?.avgRating ?? null;
+
+    if (avgWithSupplement !== null) {
+      await db
+        .update(supplements)
+        .set({
+          averageRating: avgWithSupplement,
+        })
+        .where(eq(supplements.id, id));
+    }
+  }
+
+  const allSupplements = await db.select().from(supplements).all();
+
+  for (const supplement of allSupplements) {
+    const withSupplementResult = await db
+      .select({
+        avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
+      })
+      .from(dailyEntries)
+      .innerJoin(
+        supplementsTaken,
+        eq(supplementsTaken.entryId, dailyEntries.id)
+      )
+      .where(eq(supplementsTaken.supplementId, supplement.id))
+      .get();
+
     const withoutSupplementResult = await db
       .select({
         avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
@@ -272,7 +299,7 @@ async function updateSupplementRatings(supplementIds: number[]) {
       .from(dailyEntries)
       .leftJoin(
         supplementsTaken,
-        sql`${supplementsTaken.entryId} = ${dailyEntries.id} AND ${supplementsTaken.supplementId} = ${id}`
+        sql`${supplementsTaken.entryId} = ${dailyEntries.id} AND ${supplementsTaken.supplementId} = ${supplement.id}`
       )
       .where(sql`${supplementsTaken.entryId} IS NULL`)
       .get();
@@ -285,15 +312,12 @@ async function updateSupplementRatings(supplementIds: number[]) {
         ? Number((avgWithSupplement - avgWithoutSupplement).toFixed(1))
         : null;
 
-    if (avgWithSupplement !== null) {
-      await db
-        .update(supplements)
-        .set({
-          averageRating: avgWithSupplement,
-          ratingDifference: ratingDifference,
-        })
-        .where(eq(supplements.id, id));
-    }
+    await db
+      .update(supplements)
+      .set({
+        ratingDifference: ratingDifference,
+      })
+      .where(eq(supplements.id, supplement.id));
   }
 }
 
