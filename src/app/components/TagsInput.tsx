@@ -71,6 +71,7 @@ export default function TagsInput({ value, onChange }: TagsInputProps) {
               label={option.name}
               size="small"
               {...getTagProps({ index })}
+              key={option.id}
             />
           ))
         }
