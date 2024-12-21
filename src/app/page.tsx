@@ -21,7 +21,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       const [newSupplements, newEntries] = await Promise.all([
-        getSupplements(true),
+        getSupplements(),
         getDailyEntries(),
       ]);
       setSupplements(newSupplements);

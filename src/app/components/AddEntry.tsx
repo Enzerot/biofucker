@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { addDailyEntry, updateDailyEntry } from "../actions";
+import {
+  addDailyEntry,
+  updateDailyEntry,
+  addSupplement,
+  updateSupplement,
+} from "../actions";
 import { Supplement, DailyEntry } from "../types";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DateCalendar } from "@mui/x-date-pickers";
@@ -76,11 +81,57 @@ const StyledDay = styled("button")(({ theme }) => ({
   },
 }));
 
+const TimeRangeSlider = styled(Slider)(({ theme }) => ({
+  "& .MuiSlider-thumb": {
+    height: 24,
+    width: 24,
+    backgroundColor: "#fff",
+    border: "2px solid currentColor",
+    "&:focus, &:hover, &.Mui-active, &.Mui-focusVisible": {
+      boxShadow: "inherit",
+    },
+  },
+  "& .MuiSlider-track": {
+    height: 4,
+  },
+  "& .MuiSlider-rail": {
+    height: 4,
+    opacity: 0.5,
+    backgroundColor: "#bfbfbf",
+  },
+  "& .MuiSlider-valueLabel": {
+    lineHeight: 1.2,
+    fontSize: 12,
+    background: "unset",
+    width: 40,
+    height: 40,
+    padding: 0,
+    borderRadius: "50% 50% 50% 0",
+    backgroundColor: theme.palette.primary.main,
+    transformOrigin: "bottom left",
+    transform: "translate(50%, -100%) rotate(-45deg) scale(0)",
+    "&:before": { display: "none" },
+    "&.MuiSlider-valueLabelOpen": {
+      transform: "translate(50%, -100%) rotate(-45deg) scale(1)",
+    },
+    "& > *": {
+      transform: "rotate(45deg)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+      height: "100%",
+    },
+  },
+}));
+
 interface FormValues {
   date: Date;
   rating: number;
   notes: string;
   supplements: number[];
+  sleepTime: string;
+  wakeTime: string;
 }
 
 interface AddEntryProps {
@@ -102,6 +153,21 @@ export default function AddEntry({
 }: AddEntryProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const { showNotification } = useNotification();
+  const supplementsWithoutHidden = supplements.filter((s) => !s.hidden);
+
+  const timeToMinutes = (time?: string): number => {
+    if (!time) return 0;
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>(
     {
@@ -110,6 +176,8 @@ export default function AddEntry({
         rating: 5,
         notes: "",
         supplements: [],
+        sleepTime: "00:00",
+        wakeTime: "08:00",
       },
     }
   );
@@ -163,23 +231,50 @@ export default function AddEntry({
         .map((s) => s.supplement.id);
     };
 
+    const extractTimeFromSupplements = (
+      supplements: { supplement: Supplement }[]
+    ) => {
+      let sleepTime = "00:00";
+      let wakeTime = "08:00";
+
+      supplements.forEach(({ supplement }) => {
+        if (supplement.name.startsWith("Время засыпания")) {
+          sleepTime = supplement.name.split(" ").pop() || sleepTime;
+        } else if (supplement.name.startsWith("Время пробуждения")) {
+          wakeTime = supplement.name.split(" ").pop() || wakeTime;
+        }
+      });
+
+      return { sleepTime, wakeTime };
+    };
+
     if (editEntry) {
       const entryDate = startOfDay(new Date(editEntry.date));
+      const { sleepTime, wakeTime } = extractTimeFromSupplements(
+        editEntry.supplements
+      );
       reset({
         date: entryDate,
         rating: editEntry.rating,
         notes: editEntry.notes || "",
         supplements: prepareSupplements(editEntry.supplements),
+        sleepTime,
+        wakeTime,
       });
     } else {
       const todayEntry = findEntryByDate(date);
 
       if (todayEntry) {
+        const { sleepTime, wakeTime } = extractTimeFromSupplements(
+          todayEntry.supplements
+        );
         reset({
           date,
           rating: todayEntry.rating,
           notes: todayEntry.notes || "",
           supplements: prepareSupplements(todayEntry.supplements),
+          sleepTime,
+          wakeTime,
         });
       } else {
         reset({
@@ -187,6 +282,8 @@ export default function AddEntry({
           rating: 5,
           notes: "",
           supplements: prepareSupplements(lastEntry?.supplements || []),
+          sleepTime: "00:00",
+          wakeTime: "08:00",
         });
       }
     }
@@ -194,10 +291,50 @@ export default function AddEntry({
 
   const onSubmit = async (data: FormValues) => {
     try {
+      const sleepSupplementName = `Время засыпания ${data.sleepTime}`;
+      const wakeSupplementName = `Время пробуждения ${data.wakeTime}`;
+
+      // Фильтруем существующие добавки, связанные со сном
+      const filteredSupplements = data.supplements.filter((id) => {
+        const supplement = supplements.find((s) => s.id === id);
+        return (
+          supplement &&
+          !supplement.name.startsWith("Время засыпания") &&
+          !supplement.name.startsWith("Время пробуждения")
+        );
+      });
+
+      // Находим или создаем добавки времени
+      const existingSleepSupplement = supplements.find(
+        (s) => s.name === sleepSupplementName
+      );
+      console.log(existingSleepSupplement, supplements, sleepSupplementName);
+      const existingWakeSupplement = supplements.find(
+        (s) => s.name === wakeSupplementName
+      );
+
+      const sleepSupplement =
+        existingSleepSupplement ||
+        (await addSupplement(sleepSupplementName, undefined, true));
+
+      const wakeSupplement =
+        existingWakeSupplement ||
+        (await addSupplement(wakeSupplementName, undefined, true));
+
+      if (!sleepSupplement || !wakeSupplement) {
+        throw new Error("Failed to create supplements");
+      }
+
+      const updatedSupplements = [
+        ...filteredSupplements,
+        sleepSupplement.id,
+        wakeSupplement.id,
+      ];
+
       if (editEntry) {
         await updateDailyEntry(editEntry.id, {
           rating: data.rating,
-          supplementIds: data.supplements,
+          supplementIds: updatedSupplements,
           notes: data.notes,
         });
         showNotification("Запись успешно обновлена");
@@ -206,7 +343,7 @@ export default function AddEntry({
         await addDailyEntry({
           dateTs: data.date.getTime(),
           rating: data.rating,
-          supplementIds: data.supplements,
+          supplementIds: updatedSupplements,
           notes: data.notes,
         });
         showNotification("Запись успешно добавлена");
@@ -336,6 +473,39 @@ export default function AddEntry({
 
             <Box>
               <Typography variant="subtitle2" gutterBottom>
+                Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
+                {watch("wakeTime")}
+              </Typography>
+              <Box sx={{ px: 2, py: 1 }}>
+                <TimeRangeSlider
+                  value={[
+                    timeToMinutes(watch("sleepTime")),
+                    timeToMinutes(watch("wakeTime")),
+                  ]}
+                  onChange={(_, value) => {
+                    const [sleepValue, wakeValue] = value as number[];
+                    setValue("sleepTime", minutesToTime(sleepValue));
+                    setValue("wakeTime", minutesToTime(wakeValue));
+                  }}
+                  min={0}
+                  max={1425}
+                  step={15}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => minutesToTime(value)}
+                  marks={[
+                    { value: 0, label: "00:00" },
+                    { value: 360, label: "06:00" },
+                    { value: 720, label: "12:00" },
+                    { value: 1080, label: "18:00" },
+                    { value: 1425, label: "23:45" },
+                  ]}
+                  disableSwap
+                />
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
                 Заметки
               </Typography>
               <Controller
@@ -359,8 +529,7 @@ export default function AddEntry({
                 Принятые добавки
               </Typography>
               <Grid container spacing={1}>
-                {supplements
-                  .filter((supplement) => !supplement.hidden)
+                {supplementsWithoutHidden
                   .sort((a, b) => a.name.localeCompare(b.name))
                   .map((supplement) => (
                     <Grid item xs={12} sm={6} key={supplement.id}>

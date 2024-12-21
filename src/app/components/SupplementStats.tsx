@@ -90,7 +90,7 @@ export default function SupplementStats({
     try {
       await toggleSupplementVisibility(supplement.id);
       showNotification(
-        supplement.hidden ? "Добавка п��казана" : "Добавка скрыта"
+        supplement.hidden ? "Добавка показана" : "Добавка скрыта"
       );
       onSuccess();
     } catch (error) {

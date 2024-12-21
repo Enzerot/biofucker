@@ -23,6 +23,8 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import BedtimeIcon from "@mui/icons-material/Bedtime";
+import WbSunnyIcon from "@mui/icons-material/WbSunny";
 
 interface DailyEntriesProps {
   entries: DailyEntry[];
@@ -104,7 +106,7 @@ export default function DailyEntries({
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start",
+                  alignItems: "center",
                   mb: 2,
                   mt: 2,
                 }}
@@ -112,24 +114,62 @@ export default function DailyEntries({
                 <Typography variant="h6" component="div">
                   {format(new Date(entry.date), "d MMMM yyyy", { locale: ru })}
                 </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  {entry.supplements.some(
+                    (s) =>
+                      s.supplement.name.startsWith("Время засыпания") ||
+                      s.supplement.name.startsWith("Время пробуждения")
+                  ) && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                        color: "text.secondary",
+                        fontSize: "0.875rem",
+                        "& .arrow": {
+                          mx: 0.5,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          transform: "translateY(-1px)",
+                        },
+                      }}
+                    >
+                      <BedtimeIcon sx={{ fontSize: 16, color: "#5C6BC0" }} />
+                      {entry.supplements
+                        .find((s) =>
+                          s.supplement.name.startsWith("Время засыпания")
+                        )
+                        ?.supplement.name.split(" ")
+                        .pop()}
+                      <span className="arrow">→</span>
+                      <WbSunnyIcon sx={{ fontSize: 16, color: "#FFA726" }} />
+                      {entry.supplements
+                        .find((s) =>
+                          s.supplement.name.startsWith("Время пробуждения")
+                        )
+                        ?.supplement.name.split(" ")
+                        .pop()}
+                    </Box>
+                  )}
                   <Chip
                     label={`${entry.rating} / 10`}
                     color="primary"
                     variant="outlined"
                     size="small"
-                    sx={{ mr: 2 }}
                   />
-                  <IconButton size="small" onClick={() => onEdit(entry)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => openDeleteDialog(entry)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <IconButton size="small" onClick={() => onEdit(entry)}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => openDeleteDialog(entry)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
                 </Box>
               </Box>
 
@@ -142,8 +182,14 @@ export default function DailyEntries({
               )}
 
               <Box>
+                {/* Остальные добавки */}
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   {entry.supplements
+                    .filter(
+                      (s) =>
+                        !s.supplement.name.startsWith("Время засыпания") &&
+                        !s.supplement.name.startsWith("Время пробуждения")
+                    )
                     .sort((a, b) =>
                       a.supplement.name.localeCompare(b.supplement.name)
                     )

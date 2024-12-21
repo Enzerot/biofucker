@@ -14,11 +14,12 @@ import { startOfDay, addDays, getUnixTime } from "date-fns";
 
 export async function addSupplement(
   name: string,
-  description?: string
+  description?: string,
+  hidden: boolean = false
 ): Promise<Supplement> {
   const [result] = await db
     .insert(supplements)
-    .values({ name, description })
+    .values({ name, description, hidden: hidden ? 1 : 0 })
     .returning();
 
   return {
@@ -129,7 +130,7 @@ export async function updateDailyEntry(
       });
     }
 
-    // Обновляем рейтинги добавок
+    // Обновляем рейтинги доб��вок
     await updateSupplementRatings(data.supplementIds);
   }
 
