@@ -6,7 +6,6 @@ import {
   addDailyEntry,
   updateDailyEntry,
   addSupplement,
-  updateSupplement,
 } from "../actions";
 import { Supplement, DailyEntry } from "../types";
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -34,10 +33,11 @@ import {
   styled,
 } from "@mui/material";
 import {
-  CalendarMonth as CalendarIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
+import { format as formatDate } from "date-fns";
+import { FitbitSleepData } from "../types/fitbit";
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   "& .MuiBadge-badge": {
@@ -156,22 +156,10 @@ export default function AddEntry({
   onEdit,
 }: AddEntryProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isFitbitConnected, setIsFitbitConnected] = useState(false);
+  const [sleepEfficiency, setSleepEfficiency] = useState<number | null>(null);
   const { showNotification } = useNotification();
   const supplementsWithoutHidden = supplements.filter((s) => !s.hidden);
-
-  const timeToMinutes = (time?: string): number => {
-    if (!time) return 0;
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
-
-  const minutesToTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, "0")}:${mins
-      .toString()
-      .padStart(2, "0")}`;
-  };
 
   const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>(
     {
@@ -188,6 +176,92 @@ export default function AddEntry({
 
   const date = watch("date");
 
+  // Проверка статуса подключения Fitbit
+  useEffect(() => {
+    const checkFitbitConnection = async () => {
+      try {
+        const response = await fetch("/api/fitbit/status");
+        const { isConnected } = await response.json();
+        setIsFitbitConnected(isConnected);
+      } catch (error) {
+        console.error("Error checking Fitbit connection:", error);
+      }
+    };
+    checkFitbitConnection();
+  }, []);
+
+  const roundToNearestQuarter = (timeStr: string): string => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes;
+    const roundedMinutes = Math.round(totalMinutes / 15) * 15;
+    const newHours = Math.floor(roundedMinutes / 60) % 24;
+    const newMinutes = roundedMinutes % 60;
+    return `${newHours.toString().padStart(2, "0")}:${newMinutes
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const fetchFitbitSleepData = async () => {
+    try {
+      const dateStr = formatDate(date, "yyyy-MM-dd");
+      const response = await fetch(`/api/fitbit/sleep?date=${dateStr}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch sleep data");
+      }
+
+      const sleepData = (await response.json()) as FitbitSleepData;
+
+      if (sleepData) {
+        // Преобразуем время в формат HH:mm и округляем до 15 минут
+        const sleepTime = roundToNearestQuarter(
+          sleepData.startTime.split("T")[1].substring(0, 5)
+        );
+        const wakeTime = roundToNearestQuarter(
+          sleepData.endTime.split("T")[1].substring(0, 5)
+        );
+
+        setValue("sleepTime", sleepTime);
+        setValue("wakeTime", wakeTime);
+        setSleepEfficiency(sleepData.efficiency);
+
+        showNotification("Данные о сне успешно загружены из Fitbit", "success");
+      } else {
+        setSleepEfficiency(null);
+        showNotification("Данные о сне не найдены для выбранной даты", "error");
+      }
+    } catch (error) {
+      console.error("Error fetching Fitbit sleep data:", error);
+      setSleepEfficiency(null);
+      showNotification("Ошибка при загрузке данных из Fitbit", "error");
+    }
+  };
+
+  // Автоматическая загрузка данных о сне при изменении даты
+  useEffect(() => {
+    if (isFitbitConnected) {
+      fetchFitbitSleepData();
+    }
+  }, [date, isFitbitConnected]);
+
+  const timeToMinutes = (time?: string): number => {
+    if (!time) return 0;
+    const [hours, minutes] = time.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes;
+    return hours < 21 ? totalMinutes + 180 : totalMinutes - 1260;
+  };
+
+  const minutesToTime = (minutes: number): string => {
+    const adjustedMinutes = minutes + 1260;
+    const totalMinutes =
+      adjustedMinutes >= 1440 ? adjustedMinutes - 1440 : adjustedMinutes;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return `${hours.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   // Функция для получения последней записи
   const lastEntry = useMemo(() => {
     if (entries.length === 0) return null;
@@ -196,7 +270,7 @@ export default function AddEntry({
     );
   }, [entries]);
 
-  // Функция для определения, есть ли запись на выбранную дату
+  // Функция для опреде��ения, есть ли запись на выбранную дату
   const hasEntryOnDate = (date: Date) => {
     const targetDate = startOfDay(date);
     return entries.some((entry) => {
@@ -308,7 +382,7 @@ export default function AddEntry({
         );
       });
 
-      // Находим или создаем добавки времени
+      // Находим или создаем добавку времени
       const existingSleepSupplement = supplements.find(
         (s) => s.name === sleepSupplementName
       );
@@ -363,6 +437,10 @@ export default function AddEntry({
   const handleCancelEdit = () => {
     onCancelEdit?.();
     handleDateChange(startOfDay(new Date()));
+  };
+
+  const handleFitbitConnect = () => {
+    window.location.href = "/api/fitbit/auth";
   };
 
   return (
@@ -464,9 +542,18 @@ export default function AddEntry({
             </Dialog>
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Рейтинг дня: {watch("rating")}
-              </Typography>
+              <Box
+                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}
+              >
+                <Typography variant="subtitle2">
+                  Рейтинг дня: {watch("rating")}
+                </Typography>
+                {sleepEfficiency !== null && (
+                  <Typography variant="subtitle2" color="primary">
+                    Эффективность сна: {sleepEfficiency}%
+                  </Typography>
+                )}
+              </Box>
               <Controller
                 name="rating"
                 control={control}
@@ -487,6 +574,17 @@ export default function AddEntry({
                 Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
                 {watch("wakeTime")}
               </Typography>
+              {!isFitbitConnected && (
+                <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleFitbitConnect}
+                  >
+                    Подключить Fitbit
+                  </Button>
+                </Stack>
+              )}
               <Box sx={{ px: 2, py: 1 }}>
                 <TimeRangeSlider
                   value={[
@@ -504,11 +602,12 @@ export default function AddEntry({
                   valueLabelDisplay="auto"
                   valueLabelFormat={(value) => minutesToTime(value)}
                   marks={[
-                    { value: 0, label: "00:00" },
-                    { value: 360, label: "06:00" },
-                    { value: 720, label: "12:00" },
-                    { value: 1080, label: "18:00" },
-                    { value: 1425, label: "23:45" },
+                    { value: 0, label: "21:00" },
+                    { value: 180, label: "00:00" },
+                    { value: 540, label: "06:00" },
+                    { value: 900, label: "12:00" },
+                    { value: 1260, label: "18:00" },
+                    { value: 1425, label: "20:45" },
                   ]}
                   disableSwap
                 />
