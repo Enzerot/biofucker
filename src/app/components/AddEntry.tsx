@@ -14,7 +14,7 @@ import { DateCalendar } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ru } from "date-fns/locale";
 import { useNotification } from "../contexts/NotificationContext";
-import { startOfDay, format, isEqual, isToday } from "date-fns";
+import { startOfDay, format, isEqual, isToday, addDays } from "date-fns";
 import {
   Card,
   CardContent,
@@ -33,7 +33,11 @@ import {
   Badge,
   styled,
 } from "@mui/material";
-import { CalendarMonth as CalendarIcon } from "@mui/icons-material";
+import {
+  CalendarMonth as CalendarIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+} from "@mui/icons-material";
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   "& .MuiBadge-badge": {
@@ -374,6 +378,13 @@ export default function AddEntry({
                 Дата
               </Typography>
               <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                <IconButton
+                  onClick={() => handleDateChange(addDays(date, -1))}
+                  color="primary"
+                  size="small"
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
                 <Controller
                   name="date"
                   control={control}
@@ -397,11 +408,11 @@ export default function AddEntry({
                   )}
                 />
                 <IconButton
-                  onClick={() => setCalendarOpen(true)}
+                  onClick={() => handleDateChange(addDays(date, 1))}
                   color="primary"
                   size="small"
                 >
-                  <CalendarIcon />
+                  <ChevronRightIcon />
                 </IconButton>
               </Box>
             </Box>
