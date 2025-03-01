@@ -1,13 +1,6 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
-import path from "path";
 
-const userDataPath = process.cwd()
-export const sqlitePath =
-  process.env.NODE_ENV === "development"
-    ? "sqlite.db"
-    : path.join(userDataPath, "sqlite.db");
-
-const sqlite = new Database(sqlitePath);
-export const db = drizzle(sqlite, { schema });
+const sql = neon(process.env.DATABASE_URL!);
+export const db = drizzle(sql, { schema });

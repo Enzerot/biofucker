@@ -176,7 +176,6 @@ export default function AddEntry({
 
   const date = watch("date");
 
-  // Проверка статуса подключения Fitbit
   useEffect(() => {
     const checkFitbitConnection = async () => {
       try {

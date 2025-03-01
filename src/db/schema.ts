@@ -1,40 +1,74 @@
-import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
+import {
+  integer,
+  pgTable,
+  serial,
+  text,
+  primaryKey,
+} from "drizzle-orm/pg-core";
 
-export const dailyEntries = sqliteTable("daily_entries", {
-  id: integer().primaryKey().notNull(),
-  date: integer().notNull(),
-  rating: integer().notNull(),
-  notes: text(),
-  createdAt: integer("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+export const supplements = pgTable("supplements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  hidden: integer("hidden").notNull().default(0),
+  average_rating: integer("average_rating"),
+  rating_difference: integer("rating_difference"),
 });
 
-export const supplements = sqliteTable("supplements", {
-  id: integer().primaryKey().notNull(),
-  name: text().notNull(),
-  description: text(),
-  averageRating: integer("average_rating"),
-  createdAt: integer("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-  hidden: integer().default(0).notNull(),
-  ratingDifference: integer("rating_difference").default(0),
+export const tags = pgTable("tags", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
 });
 
-export const supplementsTaken = sqliteTable("supplements_taken", {
-  id: integer().primaryKey().notNull(),
-  supplementId: integer("supplement_id").references(() => supplements.id),
-  entryId: integer("entry_id").references(() => dailyEntries.id),
+export const dailyEntries = pgTable("daily_entries", {
+  id: serial("id").primaryKey(),
+  date: integer("date").notNull(),
+  rating: integer("rating").notNull(),
+  notes: text("notes"),
 });
 
-export const tags = sqliteTable("tags", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-});
+export const supplementsTaken = pgTable(
+  "supplements_taken",
+  {
+    supplementId: integer("supplement_id")
+      .notNull()
+      .references(() => supplements.id, { onDelete: "cascade" }),
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => dailyEntries.id, { onDelete: "cascade" }),
+  },
+  (table) => {
+    return {
+      pk: primaryKey(table.supplementId, table.entryId),
+    };
+  }
+);
 
-export const supplementTags = sqliteTable("supplement_tags", {
-  supplementId: integer("supplement_id")
-    .notNull()
-    .references(() => supplements.id, { onDelete: "cascade" }),
-  tagId: integer("tag_id")
-    .notNull()
-    .references(() => tags.id, { onDelete: "cascade" }),
-});
+export const supplementTags = pgTable(
+  "supplement_tags",
+  {
+    supplementId: integer("supplement_id")
+      .notNull()
+      .references(() => supplements.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => {
+    return {
+      pk: primaryKey(table.supplementId, table.tagId),
+    };
+  }
+);
+
+export type Supplement = typeof supplements.$inferSelect & { tags: Tag[] };
+export type Tag = typeof tags.$inferSelect;
+export type DailyEntry = typeof dailyEntries.$inferSelect & {
+  supplements: { supplement: Supplement }[];
+};
+
+export type InsertSupplement = typeof supplements.$inferInsert;
+export type InsertTag = typeof tags.$inferInsert;
+export type InsertDailyEntry = typeof dailyEntries.$inferInsert;
+export type InsertSupplementTaken = typeof supplementsTaken.$inferInsert;
+export type InsertSupplementTag = typeof supplementTags.$inferInsert;

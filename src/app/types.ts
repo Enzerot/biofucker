@@ -3,8 +3,8 @@ export interface Supplement {
   name: string;
   description: string | null;
   hidden: number;
-  averageRating: number | null;
-  ratingDifference: number | null;
+  average_rating: number | null;
+  rating_difference: number | null;
   tags: Tag[];
 }
 

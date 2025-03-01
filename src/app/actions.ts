@@ -1,15 +1,18 @@
 "use server";
 
-import { db, sqlitePath } from "../db";
+import { db } from "../db";
 import {
   supplements,
+  tags,
   dailyEntries,
   supplementsTaken,
-  tags,
   supplementTags,
+  Supplement,
+  Tag,
+  DailyEntry,
+  InsertDailyEntry,
 } from "../db/schema";
-import { eq, sql } from "drizzle-orm";
-import { DailyEntry, Supplement, Tag } from "./types";
+import { and, eq, gte, lt, sql as drizzleSql } from "drizzle-orm";
 import { startOfDay, addDays, getUnixTime } from "date-fns";
 
 export async function addSupplement(
@@ -17,13 +20,21 @@ export async function addSupplement(
   description?: string,
   hidden: boolean = false
 ): Promise<Supplement> {
-  const [result] = await db
+  const insertedSupplements = await db
     .insert(supplements)
-    .values({ name, description, hidden: hidden ? 1 : 0 })
+    .values({
+      name,
+      description,
+      hidden: hidden ? 1 : 0,
+    })
     .returning();
 
+  if (!insertedSupplements.length) {
+    throw new Error("Не удалось добавить добавку");
+  }
+
   return {
-    ...result,
+    ...insertedSupplements[0],
     tags: [],
   };
 }
@@ -44,53 +55,64 @@ export async function addDailyEntry({
   const timestamp = getUnixTime(date);
   const nextDayTimestamp = getUnixTime(nextDay);
 
-  const existingEntry = await db
+  const existingEntries = await db
     .select()
     .from(dailyEntries)
     .where(
-      sql`${dailyEntries.date} >= ${timestamp} AND ${dailyEntries.date} < ${nextDayTimestamp}`
+      and(
+        gte(dailyEntries.date, timestamp),
+        lt(dailyEntries.date, nextDayTimestamp)
+      )
     )
-    .get();
+    .limit(1);
 
-  let entry;
-  if (existingEntry) {
-    entry = await db
+  let entryId: number;
+
+  if (existingEntries.length > 0) {
+    const existingEntry = existingEntries[0];
+    entryId = existingEntry.id;
+
+    await db
       .update(dailyEntries)
-      .set({
-        rating,
-        notes,
-      })
-      .where(eq(dailyEntries.id, existingEntry.id))
-      .returning()
-      .get();
+      .set({ rating, notes })
+      .where(eq(dailyEntries.id, entryId));
 
     await db
       .delete(supplementsTaken)
-      .where(eq(supplementsTaken.entryId, existingEntry.id));
+      .where(eq(supplementsTaken.entryId, entryId));
   } else {
-    entry = await db
+    const insertResult = await db
       .insert(dailyEntries)
-      .values({
-        date: timestamp,
-        rating,
-        notes,
-      })
-      .returning()
-      .get();
+      .values({ date: timestamp, rating, notes })
+      .returning();
+
+    if (!insertResult.length) {
+      throw new Error("Не удалось создать запись");
+    }
+
+    entryId = insertResult[0].id;
   }
 
-  for (const supplementId of supplementIds) {
-    await db.insert(supplementsTaken).values({
-      supplementId,
-      entryId: entry.id,
-    });
+  // Добавляем связи с добавками
+  if (supplementIds.length > 0) {
+    await Promise.all(
+      supplementIds.map((supplementId) =>
+        db
+          .insert(supplementsTaken)
+          .values({
+            supplementId,
+            entryId,
+          })
+          .onConflictDoNothing()
+      )
+    );
   }
 
   await updateSupplementRatings(supplementIds);
 
-  const fullEntry = await getDailyEntry(entry.id);
+  const fullEntry = await getDailyEntry(entryId);
   if (!fullEntry) {
-    throw new Error("Failed to create entry");
+    throw new Error("Не удалось получить созданную запись");
   }
 
   return fullEntry;
@@ -104,39 +126,49 @@ export async function updateDailyEntry(
     supplementIds?: number[];
   }
 ): Promise<DailyEntry> {
-  // Обновляем основные данные записи
   if (data.rating !== undefined || data.notes !== undefined) {
+    const updateData: Partial<InsertDailyEntry> = {};
+
+    if (data.rating !== undefined) {
+      updateData.rating = data.rating;
+    }
+
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
     await db
       .update(dailyEntries)
-      .set({
-        ...(data.rating !== undefined && { rating: data.rating }),
-        ...(data.notes !== undefined && { notes: data.notes }),
-      })
+      .set(updateData)
       .where(eq(dailyEntries.id, entryId));
   }
 
-  // Если переданы новые добавки, обновляем их
   if (data.supplementIds !== undefined) {
     // Удаляем старые связи
     await db
       .delete(supplementsTaken)
       .where(eq(supplementsTaken.entryId, entryId));
 
-    // Добавляем новые связи
-    for (const supplementId of data.supplementIds) {
-      await db.insert(supplementsTaken).values({
-        supplementId,
-        entryId,
-      });
+    if (data.supplementIds.length > 0) {
+      await Promise.all(
+        data.supplementIds.map((supplementId) =>
+          db
+            .insert(supplementsTaken)
+            .values({
+              supplementId,
+              entryId,
+            })
+            .onConflictDoNothing()
+        )
+      );
     }
 
-    // Обновляем рейтинги доб��вок
     await updateSupplementRatings(data.supplementIds);
   }
 
   const updatedEntry = await getDailyEntry(entryId);
   if (!updatedEntry) {
-    throw new Error("Failed to update entry");
+    throw new Error("Не удалось получить обновленную запись");
   }
 
   return updatedEntry;
@@ -145,52 +177,32 @@ export async function updateDailyEntry(
 export async function getDailyEntry(
   entryId: number
 ): Promise<DailyEntry | null> {
-  const entry = await db
+  const entries = await db
     .select()
     .from(dailyEntries)
     .where(eq(dailyEntries.id, entryId))
-    .get();
+    .limit(1);
 
-  if (!entry) return null;
+  if (entries.length === 0) return null;
+  const entry = entries[0];
 
-  const supplementsForEntry = await db
-    .select({
-      supplement: {
-        id: supplements.id,
-        name: supplements.name,
-        description: supplements.description,
-        hidden: supplements.hidden,
-        averageRating: supplements.averageRating,
-        ratingDifference: supplements.ratingDifference,
-      },
-    })
-    .from(supplementsTaken)
-    .innerJoin(supplements, eq(supplements.id, supplementsTaken.supplementId))
-    .where(eq(supplementsTaken.entryId, entryId));
-
-  const supplementsWithTags = await Promise.all(
-    supplementsForEntry.map(async ({ supplement }) => ({
-      supplement: {
-        ...supplement,
-        tags: await getSupplementTags(supplement.id),
-      },
-    }))
-  );
+  const supplementsWithTags = await getSupplementsForEntry(entryId);
 
   return {
     ...entry,
     date: entry.date * 1000,
-    supplements: supplementsWithTags,
+    supplements: supplementsWithTags.map((supplement) => ({
+      supplement,
+    })),
   };
 }
 
 export async function getSupplements(
   filterHidden: boolean = false
 ): Promise<Supplement[]> {
-  const result = await db
-    .select()
-    .from(supplements)
-    .where(filterHidden ? eq(supplements.hidden, 0) : undefined);
+  const result = filterHidden
+    ? await db.select().from(supplements).where(eq(supplements.hidden, 0))
+    : await db.select().from(supplements);
 
   const supplementsWithTags = await Promise.all(
     result.map(async (supplement) => ({
@@ -202,122 +214,92 @@ export async function getSupplements(
   return supplementsWithTags;
 }
 
-export async function getDailyEntries(): Promise<DailyEntry[] | any[]> {
+export async function getDailyEntries(): Promise<DailyEntry[]> {
   try {
     const entries = await db
       .select()
       .from(dailyEntries)
-      .orderBy(sql`${dailyEntries.date} DESC`);
+      .orderBy(drizzleSql`${dailyEntries.date} DESC`);
 
     const entriesWithSupplements = await Promise.all(
       entries.map(async (entry) => {
-        const supplementsForEntry = await db
-          .select({
-            supplement: {
-              id: supplements.id,
-              name: supplements.name,
-              description: supplements.description,
-              hidden: supplements.hidden,
-              averageRating: supplements.averageRating,
-              ratingDifference: supplements.ratingDifference,
-            },
-          })
-          .from(supplementsTaken)
-          .innerJoin(
-            supplements,
-            eq(supplements.id, supplementsTaken.supplementId)
-          )
-          .where(eq(supplementsTaken.entryId, entry.id));
-
-        const supplementsWithTags = await Promise.all(
-          supplementsForEntry.map(async ({ supplement }) => ({
-            supplement: {
-              ...supplement,
-              tags: await getSupplementTags(supplement.id),
-            },
-          }))
-        );
+        const supplementsWithTags = await getSupplementsForEntry(entry.id);
 
         return {
           ...entry,
           date: entry.date * 1000,
-          supplements: supplementsWithTags,
+          supplements: supplementsWithTags.map((supplement) => ({
+            supplement,
+          })),
         };
       })
     );
 
     return entriesWithSupplements;
   } catch (error) {
-    return [error, sqlitePath];
+    console.error("Ошибка при получении записей:", error);
+    throw error;
   }
 }
 
 async function updateSupplementRatings(supplementIds: number[]) {
   for (const id of supplementIds) {
-    const withSupplementResult = await db
-      .select({
-        avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
-      })
-      .from(dailyEntries)
-      .innerJoin(
-        supplementsTaken,
-        eq(supplementsTaken.entryId, dailyEntries.id)
-      )
-      .where(eq(supplementsTaken.supplementId, id))
-      .get();
+    const withSupplementResult = await db.execute(
+      drizzleSql`
+        SELECT ROUND(AVG(${dailyEntries.rating}::numeric), 1) as "avgRating"
+        FROM ${dailyEntries}
+        INNER JOIN ${supplementsTaken} ON ${supplementsTaken.entryId} = ${dailyEntries.id}
+        WHERE ${supplementsTaken.supplementId} = ${id}
+      `
+    );
 
-    const avgWithSupplement = withSupplementResult?.avgRating ?? null;
+    const avgWithSupplement =
+      (withSupplementResult.rows[0]?.avgRating as string) ?? null;
 
     if (avgWithSupplement !== null) {
       await db
         .update(supplements)
-        .set({
-          averageRating: avgWithSupplement,
-        })
+        .set({ average_rating: +avgWithSupplement })
         .where(eq(supplements.id, id));
     }
   }
 
-  const allSupplements = await db.select().from(supplements).all();
+  const allSupplementsList = await db.select().from(supplements);
 
-  for (const supplement of allSupplements) {
-    const withSupplementResult = await db
-      .select({
-        avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
-      })
-      .from(dailyEntries)
-      .innerJoin(
-        supplementsTaken,
-        eq(supplementsTaken.entryId, dailyEntries.id)
-      )
-      .where(eq(supplementsTaken.supplementId, supplement.id))
-      .get();
+  for (const supplement of allSupplementsList) {
+    const withSupplementResult = await db.execute(
+      drizzleSql`
+        SELECT ROUND(AVG(${dailyEntries.rating}::numeric), 1) as "avgRating"
+        FROM ${dailyEntries}
+        INNER JOIN ${supplementsTaken} ON ${supplementsTaken.entryId} = ${dailyEntries.id}
+        WHERE ${supplementsTaken.supplementId} = ${supplement.id}
+      `
+    );
 
-    const withoutSupplementResult = await db
-      .select({
-        avgRating: sql<number>`ROUND(AVG(${dailyEntries.rating}), 1)`,
-      })
-      .from(dailyEntries)
-      .leftJoin(
-        supplementsTaken,
-        sql`${supplementsTaken.entryId} = ${dailyEntries.id} AND ${supplementsTaken.supplementId} = ${supplement.id}`
-      )
-      .where(sql`${supplementsTaken.entryId} IS NULL`)
-      .get();
+    const withoutSupplementResult = await db.execute(
+      drizzleSql`
+        SELECT ROUND(AVG(${dailyEntries.rating}::numeric), 1) as "avgRating"
+        FROM ${dailyEntries}
+        LEFT JOIN ${supplementsTaken} ON 
+          ${supplementsTaken.entryId} = ${dailyEntries.id} AND 
+          ${supplementsTaken.supplementId} = ${supplement.id}
+        WHERE ${supplementsTaken.entryId} IS NULL
+      `
+    );
 
-    const avgWithSupplement = withSupplementResult?.avgRating ?? null;
-    const avgWithoutSupplement = withoutSupplementResult?.avgRating ?? null;
+    const avgWithSupplement =
+      (withSupplementResult.rows[0]?.avgRating as string) ?? null;
+    const avgWithoutSupplement =
+      (withoutSupplementResult.rows[0]?.avgRating as string) ?? null;
 
     const ratingDifference =
       avgWithSupplement !== null && avgWithoutSupplement !== null
-        ? Number((avgWithSupplement - avgWithoutSupplement).toFixed(1))
+        ? Number((+avgWithSupplement - +avgWithoutSupplement).toFixed(1))
         : null;
 
     await db
       .update(supplements)
-      .set({
-        ratingDifference: ratingDifference,
-      })
+      .set({ rating_difference: ratingDifference })
       .where(eq(supplements.id, supplement.id));
   }
 }
@@ -326,33 +308,43 @@ export async function updateSupplement(
   id: number,
   data: Partial<Supplement>
 ): Promise<Supplement> {
-  await db.update(supplements).set(data).where(eq(supplements.id, id));
+  const { tags: newTags, ...updateData } = data;
+
+  if (Object.keys(updateData).length > 0) {
+    await db.update(supplements).set(updateData).where(eq(supplements.id, id));
+  }
+
+  if (newTags) {
+    const tagIds = newTags.map((tag) => tag.id);
+    await updateSupplementTags(id, tagIds);
+  }
 
   return getFullSupplement(id);
 }
 
 export async function deleteSupplement(id: number): Promise<void> {
-  // Сначала удаляем все связи с записями
   await db
     .delete(supplementsTaken)
     .where(eq(supplementsTaken.supplementId, id));
 
-  // Затем удаляем добавку
+  await db.delete(supplementTags).where(eq(supplementTags.supplementId, id));
   await db.delete(supplements).where(eq(supplements.id, id));
 }
 
 export async function toggleSupplementVisibility(
   id: number
 ): Promise<Supplement> {
-  const supplement = await db
+  const supplementsList = await db
     .select()
     .from(supplements)
     .where(eq(supplements.id, id))
-    .get();
+    .limit(1);
 
-  if (!supplement) {
-    throw new Error("Supplement not found");
+  if (supplementsList.length === 0) {
+    throw new Error("Добавка не найдена");
   }
+
+  const supplement = supplementsList[0];
 
   await db
     .update(supplements)
@@ -363,38 +355,42 @@ export async function toggleSupplementVisibility(
 }
 
 export async function deleteDailyEntry(id: number): Promise<void> {
-  // Получаем список добавок, которые были в этот день
   const supplementsInEntry = await db
-    .select({
-      supplementId: supplementsTaken.supplementId,
-    })
+    .select({ supplementId: supplementsTaken.supplementId })
     .from(supplementsTaken)
     .where(eq(supplementsTaken.entryId, id));
 
-  // Сначала удаляем все связи с добавками
   await db.delete(supplementsTaken).where(eq(supplementsTaken.entryId, id));
 
-  // Затем удаляем саму запись
+  // Удаляем саму запись
   await db.delete(dailyEntries).where(eq(dailyEntries.id, id));
 
-  // Обновляем рейтинги всех добавок, которые были в удаленном дне
-  await updateSupplementRatings(
-    supplementsInEntry
-      .map((s) => s.supplementId)
-      .filter((id): id is number => id !== null)
-  );
+  const supplementIds = supplementsInEntry
+    .map((s) => s.supplementId)
+    .filter(Boolean);
+
+  if (supplementIds.length > 0) {
+    await updateSupplementRatings(supplementIds);
+  }
 }
 
 export async function getTags(): Promise<Tag[]> {
-  return await db.select().from(tags).orderBy(tags.name);
+  return db.select().from(tags).orderBy(tags.name);
 }
 
 export async function addTag(name: string): Promise<Tag> {
-  const [result] = await db.insert(tags).values({ name }).returning();
-  return result;
+  const result = await db.insert(tags).values({ name }).returning();
+
+  if (!result.length) {
+    throw new Error("Не удалось добавить тег");
+  }
+
+  return result[0];
 }
 
 export async function deleteTag(id: number): Promise<void> {
+  await db.delete(supplementTags).where(eq(supplementTags.tagId, id));
+
   await db.delete(tags).where(eq(tags.id, id));
 }
 
@@ -407,6 +403,7 @@ export async function getSupplementTags(supplementId: number): Promise<Tag[]> {
     .from(supplementTags)
     .innerJoin(tags, eq(tags.id, supplementTags.tagId))
     .where(eq(supplementTags.supplementId, supplementId));
+
   return result;
 }
 
@@ -418,12 +415,18 @@ export async function updateSupplementTags(
     .delete(supplementTags)
     .where(eq(supplementTags.supplementId, supplementId));
 
+  // Добавляем новые связи
   if (tagIds.length > 0) {
-    await db.insert(supplementTags).values(
-      tagIds.map((tagId) => ({
-        supplementId,
-        tagId,
-      }))
+    await Promise.all(
+      tagIds.map((tagId) =>
+        db
+          .insert(supplementTags)
+          .values({
+            supplementId,
+            tagId,
+          })
+          .onConflictDoNothing()
+      )
     );
   }
 
@@ -453,13 +456,36 @@ export async function hideSupplement(id: number): Promise<Supplement> {
 }
 
 async function getFullSupplement(id: number): Promise<Supplement> {
-  const [supplement] = await db
+  const supplementsList = await db
     .select()
     .from(supplements)
-    .where(eq(supplements.id, id));
+    .where(eq(supplements.id, id))
+    .limit(1);
+
+  if (supplementsList.length === 0) {
+    throw new Error("Добавка не найдена");
+  }
 
   return {
-    ...supplement,
+    ...supplementsList[0],
     tags: await getSupplementTags(id),
   };
+}
+
+async function getSupplementsForEntry(entryId: number): Promise<Supplement[]> {
+  const supplementsData = await db
+    .select()
+    .from(supplements)
+    .innerJoin(
+      supplementsTaken,
+      eq(supplements.id, supplementsTaken.supplementId)
+    )
+    .where(eq(supplementsTaken.entryId, entryId));
+
+  return Promise.all(
+    supplementsData.map(async (row) => ({
+      ...row.supplements,
+      tags: await getSupplementTags(row.supplements.id),
+    }))
+  );
 }

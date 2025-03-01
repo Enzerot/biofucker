@@ -133,22 +133,22 @@ export default function SupplementStats({
       switch (sortType) {
         case "difference":
           return (
-            (b.ratingDifference ?? 0) - (a.ratingDifference ?? 0) ||
+            (b.rating_difference ?? 0) - (a.rating_difference ?? 0) ||
             a.name.localeCompare(b.name)
           );
         case "difference_asc":
           return (
-            (a.ratingDifference ?? 0) - (b.ratingDifference ?? 0) ||
+            (a.rating_difference ?? 0) - (b.rating_difference ?? 0) ||
             a.name.localeCompare(b.name)
           );
         case "rating":
           return (
-            (b.averageRating ?? 0) - (a.averageRating ?? 0) ||
+            (b.average_rating ?? 0) - (a.average_rating ?? 0) ||
             a.name.localeCompare(b.name)
           );
         case "rating_asc":
           return (
-            (a.averageRating ?? 0) - (b.averageRating ?? 0) ||
+            (a.average_rating ?? 0) - (b.average_rating ?? 0) ||
             a.name.localeCompare(b.name)
           );
         case "name":
@@ -307,34 +307,36 @@ export default function SupplementStats({
                   >
                     {supplement.name}
                   </Typography>
-                  {supplement.averageRating && (
+                  {supplement.average_rating && (
                     <Chip
-                      label={`${supplement.averageRating}`}
+                      label={`${supplement.average_rating}`}
                       size="small"
                       color="primary"
                       variant="outlined"
                     />
                   )}
-                  {!!supplement.ratingDifference && (
+                  {!!supplement.rating_difference && (
                     <Tooltip
                       title={`Разница в рейтинге между днями с добавкой и без неё: ${
-                        supplement.ratingDifference > 0 ? "+" : ""
-                      }${supplement.ratingDifference.toFixed(1)}`}
+                        supplement.rating_difference > 0 ? "+" : ""
+                      }${supplement.rating_difference.toFixed(1)}`}
                     >
                       <Chip
                         label={
                           <Box sx={{ display: "flex", alignItems: "center" }}>
                             <span style={{ marginRight: 4 }}>
-                              {supplement.ratingDifference > 0 ? "↗" : "↘"}
+                              {supplement.rating_difference > 0 ? "↗" : "↘"}
                             </span>
                             <span>
-                              {Math.abs(supplement.ratingDifference).toFixed(1)}
+                              {Math.abs(supplement.rating_difference).toFixed(
+                                1
+                              )}
                             </span>
                           </Box>
                         }
                         size="small"
                         color={
-                          supplement.ratingDifference > 0 ? "success" : "error"
+                          supplement.rating_difference > 0 ? "success" : "error"
                         }
                         variant="outlined"
                         sx={{ ml: 0.5 }}
