@@ -2,6 +2,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import ClientLayout from "./components/ClientLayout";
+import { SessionProvider } from "next-auth/react";
+import { Session } from "next-auth";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
@@ -10,7 +12,7 @@ export const metadata: Metadata = {
   description: "Отслеживайте свои добавки и их эффективность",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -18,9 +20,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={inter.className}>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+          <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );
