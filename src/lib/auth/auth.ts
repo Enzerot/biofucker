@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-console.log(process.env, process.env.AUTH_SECRET);
+console.log(process.env, process.env.SECRET);
 
 export const { auth, handlers } = NextAuth({
   providers: [
@@ -65,7 +65,7 @@ export const { auth, handlers } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.SECRET,
   pages: {
     signIn: "/login",
   },
