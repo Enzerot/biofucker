@@ -2,8 +2,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import type { Metadata } from "next";
 import ClientLayout from "./components/ClientLayout";
-import { SessionProvider } from "next-auth/react";
-import { Session } from "next-auth";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
