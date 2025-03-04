@@ -5,7 +5,7 @@ const FITBIT_CLIENT_SECRET = process.env.FITBIT_CLIENT_SECRET;
 
 export async function getFitbitAuthUrl() {
   const scope = "sleep";
-  const redirectUri = "http://localhost:3000/api/fitbit/callback";
+  const redirectUri = `${process.env.BASE_URL}/api/fitbit/callback`;
 
   return `https://www.fitbit.com/oauth2/authorize?response_type=code&client_id=${FITBIT_CLIENT_ID}&redirect_uri=${encodeURIComponent(
     redirectUri
@@ -15,7 +15,7 @@ export async function getFitbitAuthUrl() {
 export async function exchangeCodeForTokens(
   code: string
 ): Promise<FitbitTokens> {
-  const redirectUri = "http://localhost:3000/api/fitbit/callback";
+  const redirectUri = `${process.env.BASE_URL}/api/fitbit/callback`;
   const response = await fetch("https://api.fitbit.com/oauth2/token", {
     method: "POST",
     headers: {

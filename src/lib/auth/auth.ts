@@ -1,8 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-console.log(process.env, process.env.SECRET);
-
 export const { auth, handlers } = NextAuth({
   providers: [
     CredentialsProvider({
