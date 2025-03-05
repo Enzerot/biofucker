@@ -144,23 +144,26 @@ export async function updateDailyEntry(
   }
 
   if (data.supplementIds !== undefined) {
-    // Удаляем старые связи
-    await db
-      .delete(supplementsTaken)
-      .where(eq(supplementsTaken.entryId, entryId));
+    if (data.supplementIds!.length > 0) {
+      const insertValues = data
+        .supplementIds!.map((supplementId) => {
+          return `(${supplementId}, ${entryId})`;
+        })
+        .join(", ");
 
-    if (data.supplementIds.length > 0) {
-      await Promise.all(
-        data.supplementIds.map((supplementId) =>
-          db
-            .insert(supplementsTaken)
-            .values({
-              supplementId,
-              entryId,
-            })
-            .onConflictDoNothing()
+      await db.execute(drizzleSql`
+        WITH deleted AS (
+          DELETE FROM supplements_taken
+          WHERE entry_id = ${entryId}
         )
-      );
+        INSERT INTO supplements_taken (supplement_id, entry_id)
+        VALUES ${drizzleSql.raw(insertValues)}
+        ON CONFLICT DO NOTHING
+      `);
+    } else {
+      await db
+        .delete(supplementsTaken)
+        .where(eq(supplementsTaken.entryId, entryId));
     }
 
     await updateSupplementRatings(data.supplementIds);
@@ -259,7 +262,7 @@ async function updateSupplementRatings(supplementIds: number[]) {
     if (avgWithSupplement !== null) {
       await db
         .update(supplements)
-        .set({ average_rating: +avgWithSupplement })
+        .set({ average_rating: Math.round(+avgWithSupplement) })
         .where(eq(supplements.id, id));
     }
   }
