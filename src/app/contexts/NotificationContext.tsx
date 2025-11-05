@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
-import { Alert, Snackbar } from "@mui/material";
+import React, { createContext, useContext } from "react";
+import { toast } from "sonner";
 
 interface NotificationContextType {
   showNotification: (message: string, type?: "success" | "error") => void;
@@ -16,36 +16,20 @@ export function NotificationProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [type, setType] = useState<"success" | "error">("success");
-
   const showNotification = (
-    newMessage: string,
+    message: string,
     type: "success" | "error" = "success"
   ) => {
-    setMessage(newMessage);
-    setType(type);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
+    if (type === "success") {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
   };
 
   return (
     <NotificationContext.Provider value={{ showNotification }}>
       {children}
-      <Snackbar
-        open={open}
-        autoHideDuration={3000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert onClose={handleClose} severity={type} sx={{ width: "100%" }}>
-          {message}
-        </Alert>
-      </Snackbar>
     </NotificationContext.Provider>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import RootStyleRegistry from "../emotion";
-import Providers from "../providers";
 import { NotificationProvider } from "../contexts/NotificationContext";
 import Header from "./Header";
 import { ProgressBarProvider } from "./ProgressBar";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function ClientLayout({
   children,
@@ -12,15 +12,14 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProgressBarProvider>
-      <RootStyleRegistry>
-        <Providers>
-          <NotificationProvider>
-            <Header />
-            <main>{children}</main>
-          </NotificationProvider>
-        </Providers>
-      </RootStyleRegistry>
-    </ProgressBarProvider>
+    <TooltipProvider>
+      <ProgressBarProvider>
+        <NotificationProvider>
+          <Header />
+          <main>{children}</main>
+          <Toaster />
+        </NotificationProvider>
+      </ProgressBarProvider>
+    </TooltipProvider>
   );
 }

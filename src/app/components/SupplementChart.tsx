@@ -13,7 +13,7 @@ import {
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { getSupplementRatings } from "../actions";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Loader2 } from "lucide-react";
 
 interface SupplementChartProps {
   supplementId: number;
@@ -44,33 +44,17 @@ export default function SupplementChart({
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: 400,
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: 400,
-        }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          Нет данных для отображения
-        </Typography>
-      </Box>
+      <div className="flex justify-center items-center h-[400px]">
+        <p className="text-muted-foreground">Нет данных для отображения</p>
+      </div>
     );
   }
 
@@ -80,7 +64,7 @@ export default function SupplementChart({
   }));
 
   return (
-    <Box sx={{ width: "100%", height: 400 }}>
+    <div className="w-full h-[400px]">
       <ResponsiveContainer>
         <LineChart
           data={chartData}
@@ -92,10 +76,7 @@ export default function SupplementChart({
           }}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="formattedDate"
-            tick={{ fontSize: 12 }}
-          />
+          <XAxis dataKey="formattedDate" tick={{ fontSize: 12 }} />
           <YAxis
             domain={[1, 10]}
             ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
@@ -108,13 +89,13 @@ export default function SupplementChart({
           <Line
             type="monotone"
             dataKey="rating"
-            stroke="#1976d2"
+            stroke="hsl(var(--primary))"
             strokeWidth={2}
             dot={{ r: 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>
       </ResponsiveContainer>
-    </Box>
+    </div>
   );
-} 
+}

@@ -10,15 +10,11 @@ import {
 import { useNotification } from "../contexts/NotificationContext";
 import { Supplement, Tag } from "../types";
 import TagsInput from "./TagsInput";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  TextField,
-  Button,
-  Stack,
-  Box,
-} from "@mui/material";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 interface FormValues {
   name: string;
@@ -92,41 +88,46 @@ export default function AddSupplement({
   };
 
   return (
-    <Card variant="outlined">
-      <CardHeader
-        title={editSupplement ? "Редактирование добавки" : "Новая добавка"}
-      />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {editSupplement ? "Редактирование добавки" : "Новая добавка"}
+        </CardTitle>
+      </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Stack spacing={2}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Название добавки</Label>
             <Controller
               name="name"
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField
+                <Input
                   {...field}
-                  label="Название добавки"
-                  fullWidth
+                  id="name"
+                  placeholder="Название добавки"
                   required
-                  size="small"
                 />
               )}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Описание</Label>
             <Controller
               name="description"
               control={control}
               render={({ field }) => (
-                <TextField
+                <Textarea
                   {...field}
-                  label="Описание"
-                  fullWidth
-                  multiline
+                  id="description"
+                  placeholder="Описание"
                   rows={3}
-                  size="small"
                 />
               )}
             />
+          </div>
+          <div className="space-y-2">
             <Controller
               name="tags"
               control={control}
@@ -134,31 +135,26 @@ export default function AddSupplement({
                 <TagsInput value={field.value} onChange={field.onChange} />
               )}
             />
-            <Box sx={{ display: "flex", gap: 1 }}>
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" size="lg">
+              {editSupplement ? "Сохранить" : "Добавить"}
+            </Button>
+            {editSupplement && (
               <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
+                type="button"
+                onClick={() => {
+                  reset();
+                  onCancelEdit?.();
+                }}
+                variant="outline"
+                className="flex-1"
+                size="lg"
               >
-                {editSupplement ? "Сохранить" : "Добавить"}
+                Отмена
               </Button>
-              {editSupplement && (
-                <Button
-                  onClick={() => {
-                    reset();
-                    onCancelEdit?.();
-                  }}
-                  variant="outlined"
-                  fullWidth
-                  size="large"
-                >
-                  Отмена
-                </Button>
-              )}
-            </Box>
-          </Stack>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

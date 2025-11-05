@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  Container,
-} from "@mui/material";
 import { useRouter } from "next-nprogress-bar";
 import { usePathname } from "next/navigation";
-import ScienceIcon from "@mui/icons-material/Science";
+import { Beaker } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Header() {
   const router = useRouter();
@@ -22,62 +16,34 @@ export default function Header() {
   ];
 
   return (
-    <AppBar position="sticky" color="primary" elevation={1}>
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-            }}
+    <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
+      <div className="container mx-auto max-w-7xl">
+        <div className="flex h-16 items-center justify-between px-4">
+          <div
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => router.push("/")}
           >
-            <ScienceIcon sx={{ fontSize: 32, mr: 1 }} />
-            <Typography
-              variant="h5"
-              noWrap
-              sx={{
-                fontWeight: 700,
-                letterSpacing: ".1rem",
-                color: "inherit",
-                textDecoration: "none",
-              }}
-            >
-              БИОФАКЕР
-            </Typography>
-          </Box>
+            <Beaker className="h-8 w-8 text-primary" />
+            <h1 className="text-xl font-bold tracking-wider">БИОФАКЕР</h1>
+          </div>
 
-          <Box sx={{ flexGrow: 1 }} />
-
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <nav className="flex gap-1">
             {pages.map((page) => (
               <Button
                 key={page.path}
                 onClick={() => router.push(page.path)}
-                sx={{
-                  color: "white",
-                  display: "block",
-                  fontWeight: pathname === page.path ? 700 : 400,
-                  borderBottom:
-                    pathname === page.path
-                      ? "2px solid white"
-                      : "2px solid transparent",
-                  borderRadius: 0,
-                  px: 2,
-                  py: 2,
-                  transition: "border-color 0.2s ease",
-                  "&:hover": {
-                    borderColor: "rgba(255, 255, 255, 0.5)",
-                  },
-                }}
+                variant="ghost"
+                className={cn(
+                  pathname === page.path &&
+                    "font-bold border-b-2 border-primary rounded-none"
+                )}
               >
                 {page.title}
               </Button>
             ))}
-          </Box>
-        </Toolbar>
-      </Container>
-    </AppBar>
+          </nav>
+        </div>
+      </div>
+    </header>
   );
 }

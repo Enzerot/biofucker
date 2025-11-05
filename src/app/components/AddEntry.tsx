@@ -2,132 +2,25 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import {
-  addDailyEntry,
-  updateDailyEntry,
-  addSupplement,
-} from "../actions";
+import { addDailyEntry, updateDailyEntry, addSupplement } from "../actions";
 import { Supplement, DailyEntry } from "../types";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { DateCalendar } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { ru } from "date-fns/locale";
 import { useNotification } from "../contexts/NotificationContext";
 import { startOfDay, format, isEqual, isToday, addDays } from "date-fns";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  TextField,
-  Slider,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  Box,
-  Grid,
-  Stack,
-  IconButton,
-  Dialog,
-  Badge,
-  styled,
-} from "@mui/material";
-import {
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-} from "@mui/icons-material";
+import { ru } from "date-fns/locale";
 import { format as formatDate } from "date-fns";
 import { FitbitSleepData } from "../types/fitbit";
-
-const StyledBadge = styled(Badge)(({ theme }) => ({
-  "& .MuiBadge-badge": {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.main,
-    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-    "&::after": {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      borderRadius: "50%",
-      border: "1px solid currentColor",
-      content: '""',
-    },
-  },
-}));
-
-const StyledDay = styled("button")(({ theme }) => ({
-  ...theme.typography.caption,
-  padding: 0,
-  width: 36,
-  height: 36,
-  border: "none",
-  background: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "50%",
-  cursor: "pointer",
-  "&:hover": {
-    backgroundColor: theme.palette.action.hover,
-  },
-  "&.Mui-selected": {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-    },
-  },
-  "&.Mui-disabled": {
-    opacity: 0.5,
-    pointerEvents: "none",
-  },
-}));
-
-const TimeRangeSlider = styled(Slider)(({ theme }) => ({
-  "& .MuiSlider-thumb": {
-    height: 24,
-    width: 24,
-    backgroundColor: "#fff",
-    border: "2px solid currentColor",
-    "&:focus, &:hover, &.Mui-active, &.Mui-focusVisible": {
-      boxShadow: "inherit",
-    },
-  },
-  "& .MuiSlider-track": {
-    height: 4,
-  },
-  "& .MuiSlider-rail": {
-    height: 4,
-    opacity: 0.5,
-    backgroundColor: "#bfbfbf",
-  },
-  "& .MuiSlider-valueLabel": {
-    lineHeight: 1.2,
-    fontSize: 12,
-    background: "unset",
-    width: 40,
-    height: 40,
-    padding: 0,
-    borderRadius: "50% 50% 50% 0",
-    backgroundColor: theme.palette.primary.main,
-    transformOrigin: "bottom left",
-    transform: "translate(50%, -100%) rotate(-45deg) scale(0)",
-    "&:before": { display: "none" },
-    "&.MuiSlider-valueLabelOpen": {
-      transform: "translate(50%, -100%) rotate(-45deg) scale(1)",
-    },
-    "& > *": {
-      transform: "rotate(45deg)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "100%",
-      height: "100%",
-    },
-  },
-}));
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { RangeSlider } from "@/components/ui/range-slider";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FormValues {
   date: Date;
@@ -212,7 +105,6 @@ export default function AddEntry({
       const sleepData = (await response.json()) as FitbitSleepData;
 
       if (sleepData) {
-        // Преобразуем время в формат HH:mm и округляем до 15 минут
         const sleepTime = roundToNearestQuarter(
           sleepData.startTime.split("T")[1].substring(0, 5)
         );
@@ -236,7 +128,6 @@ export default function AddEntry({
     }
   };
 
-  // Автоматическая загрузка данных о сне при изменении даты
   useEffect(() => {
     if (isFitbitConnected) {
       fetchFitbitSleepData();
@@ -261,7 +152,6 @@ export default function AddEntry({
       .padStart(2, "0")}`;
   };
 
-  // Функция для получения последней записи
   const lastEntry = useMemo(() => {
     if (entries.length === 0) return null;
     return entries.reduce((latest, current) =>
@@ -269,7 +159,6 @@ export default function AddEntry({
     );
   }, [entries]);
 
-  // Функция для опреде��ения, есть ли запись на выбранную дату
   const hasEntryOnDate = (date: Date) => {
     const targetDate = startOfDay(date);
     return entries.some((entry) => {
@@ -278,7 +167,6 @@ export default function AddEntry({
     });
   };
 
-  // Функция для поиска записи по дате
   const findEntryByDate = (date: Date): DailyEntry | undefined => {
     const targetDate = startOfDay(date);
     return entries.find((entry) => {
@@ -287,7 +175,6 @@ export default function AddEntry({
     });
   };
 
-  // Обработчик изменения даты
   const handleDateChange = (newDate: Date) => {
     const utcDate = startOfDay(newDate);
     setValue("date", utcDate);
@@ -300,7 +187,6 @@ export default function AddEntry({
     }
   };
 
-  // Заполнение формы при монтировании или изменении editEntry
   useEffect(() => {
     const prepareSupplements = (supplements: { supplement: Supplement }[]) => {
       return supplements
@@ -371,7 +257,6 @@ export default function AddEntry({
       const sleepSupplementName = `Время засыпания ${data.sleepTime}`;
       const wakeSupplementName = `Время пробуждения ${data.wakeTime}`;
 
-      // Фильтруем существующие добавки, связанные со сном
       const filteredSupplements = data.supplements.filter((id) => {
         const supplement = supplements.find((s) => s.id === id);
         return (
@@ -381,11 +266,9 @@ export default function AddEntry({
         );
       });
 
-      // Находим или создаем добавку времени
       const existingSleepSupplement = supplements.find(
         (s) => s.name === sleepSupplementName
       );
-      console.log(existingSleepSupplement, supplements, sleepSupplementName);
       const existingWakeSupplement = supplements.find(
         (s) => s.name === wakeSupplementName
       );
@@ -443,261 +326,212 @@ export default function AddEntry({
   };
 
   return (
-    <Card variant="outlined">
-      <CardHeader
-        title={editEntry ? "Редактировать запись" : "Добавить запись"}
-      />
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {editEntry ? "Редактировать запись" : "Добавить запись"}
+        </CardTitle>
+      </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Дата
-              </Typography>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <IconButton
-                  onClick={() => handleDateChange(addDays(date, -1))}
-                  color="primary"
-                  size="small"
-                >
-                  <ChevronLeftIcon />
-                </IconButton>
-                <Controller
-                  name="date"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      value={format(field.value, "dd MMMM yyyy", {
-                        locale: ru,
-                      })}
-                      fullWidth
-                      size="small"
-                      InputProps={{
-                        readOnly: true,
-                        sx: {
-                          cursor: "pointer",
-                          color: editEntry ? "primary.main" : "inherit",
-                          fontWeight: editEntry ? "bold" : "normal",
-                        },
-                      }}
-                      onClick={() => setCalendarOpen(true)}
-                    />
-                  )}
-                />
-                <IconButton
-                  onClick={() => handleDateChange(addDays(date, 1))}
-                  color="primary"
-                  size="small"
-                >
-                  <ChevronRightIcon />
-                </IconButton>
-              </Box>
-            </Box>
-
-            <Dialog
-              open={calendarOpen}
-              onClose={() => setCalendarOpen(false)}
-              PaperProps={{
-                sx: {
-                  p: 0,
-                  "& .MuiDateCalendar-root": {
-                    width: 320,
-                    height: "auto",
-                  },
-                },
-              }}
-            >
-              <LocalizationProvider
-                dateAdapter={AdapterDateFns}
-                adapterLocale={ru}
-              >
-                <DateCalendar
-                  value={date}
-                  onChange={(newDate) => newDate && handleDateChange(newDate)}
-                  slots={{
-                    day: (props) => {
-                      const hasEntry = hasEntryOnDate(props.day);
-                      return (
-                        <StyledBadge
-                          key={props.day.toString()}
-                          overlap="circular"
-                          variant={hasEntry ? "dot" : undefined}
-                          color="primary"
-                        >
-                          <StyledDay
-                            onClick={() => props.onDaySelect?.(props.day)}
-                            className={props.selected ? "Mui-selected" : ""}
-                            type="button"
-                            disabled={props.disabled}
-                          >
-                            {props.day.getDate()}
-                          </StyledDay>
-                        </StyledBadge>
-                      );
-                    },
-                  }}
-                />
-              </LocalizationProvider>
-            </Dialog>
-
-            <Box>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}
-              >
-                <Typography variant="subtitle2">
-                  Рейтинг дня: {watch("rating")}
-                </Typography>
-                {sleepEfficiency !== null && (
-                  <Typography variant="subtitle2" color="primary">
-                    Эффективность сна: {sleepEfficiency}%
-                  </Typography>
-                )}
-              </Box>
-              <Controller
-                name="rating"
-                control={control}
-                render={({ field }) => (
-                  <Slider
-                    {...field}
-                    min={1}
-                    max={10}
-                    step={1}
-                    valueLabelDisplay="auto"
-                  />
-                )}
-              />
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
-                {watch("wakeTime")}
-              </Typography>
-              {!isFitbitConnected && (
-                <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleFitbitConnect}
-                  >
-                    Подключить Fitbit
-                  </Button>
-                </Stack>
-              )}
-              <Box sx={{ px: 2, py: 1 }}>
-                <TimeRangeSlider
-                  value={[
-                    timeToMinutes(watch("sleepTime")),
-                    timeToMinutes(watch("wakeTime")),
-                  ]}
-                  onChange={(_, value) => {
-                    const [sleepValue, wakeValue] = value as number[];
-                    setValue("sleepTime", minutesToTime(sleepValue));
-                    setValue("wakeTime", minutesToTime(wakeValue));
-                  }}
-                  min={0}
-                  max={1425}
-                  step={15}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(value) => minutesToTime(value)}
-                  marks={[
-                    { value: 0, label: "21:00" },
-                    { value: 180, label: "00:00" },
-                    { value: 540, label: "06:00" },
-                    { value: 900, label: "12:00" },
-                    { value: 1260, label: "18:00" },
-                    { value: 1425, label: "20:45" },
-                  ]}
-                  disableSwap
-                />
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Заметки
-              </Typography>
-              <Controller
-                name="notes"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    multiline
-                    rows={4}
-                    fullWidth
-                    placeholder="Как прошел день?"
-                    size="small"
-                  />
-                )}
-              />
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Принятые добавки
-              </Typography>
-              <Grid container spacing={1}>
-                {supplementsWithoutHidden
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((supplement) => (
-                    <Grid item xs={12} sm={6} key={supplement.id}>
-                      <Controller
-                        name="supplements"
-                        control={control}
-                        render={({ field }) => (
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={field.value.includes(supplement.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    field.onChange([
-                                      ...field.value,
-                                      supplement.id,
-                                    ]);
-                                  } else {
-                                    field.onChange(
-                                      field.value.filter(
-                                        (id) => id !== supplement.id
-                                      )
-                                    );
-                                  }
-                                }}
-                              />
-                            }
-                            label={supplement.name}
-                          />
-                        )}
-                      />
-                    </Grid>
-                  ))}
-              </Grid>
-            </Box>
-
-            <Stack direction="row" spacing={2}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Дата</Label>
+            <div className="flex items-center gap-2">
               <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleDateChange(addDays(date, -1))}
               >
-                {editEntry ? "Сохранить изменения" : "Сохранить запись"}
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              {editEntry && onCancelEdit && (
-                <Button
-                  onClick={handleCancelEdit}
-                  variant="outlined"
-                  fullWidth
-                  size="large"
-                  disabled={isToday(date)}
-                >
-                  Отмена
-                </Button>
+              <Controller
+                name="date"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    value={format(field.value, "dd MMMM yyyy", {
+                      locale: ru,
+                    })}
+                    readOnly
+                    onClick={() => setCalendarOpen(true)}
+                    className={cn(
+                      "cursor-pointer flex-1",
+                      editEntry && "text-primary font-bold"
+                    )}
+                  />
+                )}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => handleDateChange(addDays(date, 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <DialogContent className="p-0 max-w-fit">
+              <Calendar
+                value={date}
+                onChange={(newDate) => newDate && handleDateChange(newDate)}
+                dayRenderer={(day, isSelected) => {
+                  const hasEntry = hasEntryOnDate(day);
+                  return (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => handleDateChange(day)}
+                        className={cn(
+                          "w-full h-9 rounded-md text-sm hover:bg-accent",
+                          isSelected &&
+                            "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
+                      >
+                        {format(day, "d")}
+                      </button>
+                      {hasEntry && (
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
+                      )}
+                    </div>
+                  );
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Рейтинг дня: {watch("rating")}</Label>
+              {sleepEfficiency !== null && (
+                <span className="text-sm text-primary font-medium">
+                  Эффективность сна: {sleepEfficiency}%
+                </span>
               )}
-            </Stack>
-          </Box>
+            </div>
+            <Controller
+              name="rating"
+              control={control}
+              render={({ field }) => (
+                <Slider
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={field.value}
+                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                />
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
+              {watch("wakeTime")}
+            </Label>
+            {!isFitbitConnected && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleFitbitConnect}
+                className="mb-2"
+              >
+                Подключить Fitbit
+              </Button>
+            )}
+            <RangeSlider
+              value={[
+                timeToMinutes(watch("sleepTime")),
+                timeToMinutes(watch("wakeTime")),
+              ]}
+              onChange={(value) => {
+                setValue("sleepTime", minutesToTime(value[0]));
+                setValue("wakeTime", minutesToTime(value[1]));
+              }}
+              min={0}
+              max={1425}
+              step={15}
+              valueLabelFormat={(value) => minutesToTime(value)}
+              marks={[
+                { value: 0, label: "21:00" },
+                { value: 180, label: "00:00" },
+                { value: 540, label: "06:00" },
+                { value: 900, label: "12:00" },
+                { value: 1260, label: "18:00" },
+                { value: 1425, label: "20:45" },
+              ]}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Заметки</Label>
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <Textarea
+                  {...field}
+                  id="notes"
+                  rows={4}
+                  placeholder="Как прошел день?"
+                />
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Принятые добавки</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {supplementsWithoutHidden
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((supplement) => (
+                  <Controller
+                    key={supplement.id}
+                    name="supplements"
+                    control={control}
+                    render={({ field }) => (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={field.value.includes(supplement.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              field.onChange([...field.value, supplement.id]);
+                            } else {
+                              field.onChange(
+                                field.value.filter((id) => id !== supplement.id)
+                              );
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{supplement.name}</span>
+                      </label>
+                    )}
+                  />
+                ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" size="lg">
+              {editEntry ? "Сохранить изменения" : "Сохранить запись"}
+            </Button>
+            {editEntry && onCancelEdit && (
+              <Button
+                type="button"
+                onClick={handleCancelEdit}
+                variant="outline"
+                className="flex-1"
+                size="lg"
+                disabled={isToday(date)}
+              >
+                Отмена
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

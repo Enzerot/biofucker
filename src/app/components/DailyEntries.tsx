@@ -4,27 +4,20 @@ import { useState } from "react";
 import { DailyEntry, Supplement } from "../types";
 import { deleteDailyEntry } from "../actions";
 import { useNotification } from "../contexts/NotificationContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  Typography,
-  IconButton,
-  Stack,
-  Box,
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  Chip,
-  CircularProgress,
-} from "@mui/material";
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import BedtimeIcon from "@mui/icons-material/Bedtime";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
+import { Edit, Trash2, Moon, Sun, Loader2 } from "lucide-react";
 
 interface DailyEntriesProps {
   entries: DailyEntry[];
@@ -66,172 +59,125 @@ export default function DailyEntries({
   };
 
   if (entries.length === 0 && !isLoading) {
-    return (
-      <Typography variant="body1" color="text.secondary" align="center">
-        Нет записей
-      </Typography>
-    );
+    return <p className="text-center text-muted-foreground">Нет записей</p>;
   }
 
-  // Сортируем записи по дате (сначала новые)
   const sortedEntries = [...entries].sort((a, b) => b.date - a.date);
 
   return (
-    <Box sx={{ position: "relative" }}>
+    <div className="relative">
       {isLoading && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            minHeight: "600px",
-            justifyContent: "center",
-            pt: 30,
-            backgroundColor: "rgba(255, 255, 255, 0.7)",
-            zIndex: 1,
-          }}
-        >
-          <CircularProgress />
-        </Box>
+        <div className="absolute inset-0 flex items-start justify-center pt-32 bg-background/70 z-10 min-h-[600px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       )}
 
-      <Stack spacing={2} sx={{ opacity: isLoading ? 0.9 : 1 }}>
+      <div className={`space-y-4 ${isLoading ? "opacity-90" : ""}`}>
         {sortedEntries.map((entry) => (
-          <Card key={entry.id} variant="outlined">
-            <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                  mt: 2,
-                }}
-              >
-                <Typography variant="h6" component="div">
+          <Card key={entry.id}>
+            <CardContent className="pt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">
                   {format(new Date(entry.date), "d MMMM yyyy", { locale: ru })}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                </h3>
+                <div className="flex items-center gap-2">
                   {entry.supplements.some(
                     (s) =>
                       s.supplement.name.startsWith("Время засыпания") ||
                       s.supplement.name.startsWith("Время пробуждения")
                   ) && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        color: "text.secondary",
-                        fontSize: "0.875rem",
-                        "& .arrow": {
-                          mx: 0.5,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          transform: "translateY(-1px)",
-                        },
-                      }}
-                    >
-                      <BedtimeIcon sx={{ fontSize: 16, color: "#5C6BC0" }} />
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Moon className="h-4 w-4 text-blue-400" />
                       {entry.supplements
                         .find((s) =>
                           s.supplement.name.startsWith("Время засыпания")
                         )
                         ?.supplement.name.split(" ")
                         .pop()}
-                      <span className="arrow">→</span>
-                      <WbSunnyIcon sx={{ fontSize: 16, color: "#FFA726" }} />
+                      <span className="mx-1">→</span>
+                      <Sun className="h-4 w-4 text-orange-400" />
                       {entry.supplements
                         .find((s) =>
                           s.supplement.name.startsWith("Время пробуждения")
                         )
                         ?.supplement.name.split(" ")
                         .pop()}
-                    </Box>
+                    </div>
                   )}
-                  <Chip
-                    label={`${entry.rating} / 10`}
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <IconButton size="small" onClick={() => onEdit(entry)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => openDeleteDialog(entry)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </Box>
+                  <Badge variant="outline">{entry.rating} / 10</Badge>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onEdit(entry)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => openDeleteDialog(entry)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
 
               {entry.notes && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {entry.notes}
-                  </Typography>
-                </Box>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {entry.notes}
+                </p>
               )}
 
-              <Box>
-                {/* Остальные добавки */}
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {entry.supplements
-                    .filter(
-                      (s) =>
-                        !s.supplement.name.startsWith("Время засыпания") &&
-                        !s.supplement.name.startsWith("Время пробуждения")
-                    )
-                    .sort((a, b) =>
-                      a.supplement.name.localeCompare(b.supplement.name)
-                    )
-                    .map((supplement) => (
-                      <Chip
-                        key={`${entry.id}-${supplement.supplement.id}`}
-                        label={supplement.supplement.name}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                </Stack>
-              </Box>
+              <div className="flex flex-wrap gap-2">
+                {entry.supplements
+                  .filter(
+                    (s) =>
+                      !s.supplement.name.startsWith("Время засыпания") &&
+                      !s.supplement.name.startsWith("Время пробуждения")
+                  )
+                  .sort((a, b) =>
+                    a.supplement.name.localeCompare(b.supplement.name)
+                  )
+                  .map((supplement) => (
+                    <Badge
+                      key={`${entry.id}-${supplement.supplement.id}`}
+                      variant="secondary"
+                    >
+                      {supplement.supplement.name}
+                    </Badge>
+                  ))}
+              </div>
             </CardContent>
           </Card>
         ))}
-      </Stack>
+      </div>
 
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Подтверждение удаления</DialogTitle>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
-          <Typography>
-            Вы уверены, что хотите удалить запись за{" "}
-            {entryToDelete &&
-              format(new Date(entryToDelete.date), "d MMMM yyyy", {
-                locale: ru,
-              })}
-            ?
-          </Typography>
+          <DialogHeader>
+            <DialogTitle>Подтверждение удаления</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить запись за{" "}
+              {entryToDelete &&
+                format(new Date(entryToDelete.date), "d MMMM yyyy", {
+                  locale: ru,
+                })}
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
-          <Button onClick={handleDelete} color="error">
-            Удалить
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

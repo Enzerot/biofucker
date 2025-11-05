@@ -5,7 +5,6 @@ import { getSupplements } from "../actions";
 import { Supplement } from "../types";
 import SupplementStats from "../components/SupplementStats";
 import AddSupplement from "../components/AddSupplement";
-import { Container, Box, Stack } from "@mui/material";
 
 export default function SupplementsPage() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
@@ -32,9 +31,9 @@ export default function SupplementsPage() {
   };
 
   return (
-    <Box sx={{ py: 4 }}>
-      <Container maxWidth="md">
-        <Stack spacing={4}>
+    <div className="py-8">
+      <div className="container mx-auto max-w-4xl px-4">
+        <div className="space-y-8">
           <AddSupplement
             onSuccess={onDataChange}
             editSupplement={editingSupplement}
@@ -45,8 +44,8 @@ export default function SupplementsPage() {
             onSuccess={onDataChange}
             onEdit={handleEdit}
           />
-        </Stack>
-      </Container>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,20 +3,19 @@
 import { useState, useEffect } from "react";
 import { Tag } from "../types";
 import { getTags, addTag } from "../actions";
-import {
-  Autocomplete,
-  TextField,
-  Chip,
-  Box,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
-import { Add as AddIcon } from "@mui/icons-material";
 import { useNotification } from "../contexts/NotificationContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { X, Plus } from "lucide-react";
 
 interface TagsInputProps {
   value: Tag[];
@@ -25,6 +24,7 @@ interface TagsInputProps {
 
 export default function TagsInput({ value, onChange }: TagsInputProps) {
   const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const [newTagDialogOpen, setNewTagDialogOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const { showNotification } = useNotification();
@@ -52,63 +52,112 @@ export default function TagsInput({ value, onChange }: TagsInputProps) {
     }
   };
 
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Autocomplete
-        multiple
-        options={allTags}
-        value={value}
-        getOptionLabel={(option) => option.name}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
-        onChange={(_, newValue) => onChange(newValue)}
-        renderInput={(params) => (
-          <TextField {...params} label="Теги" size="small" />
-        )}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => (
-            <Chip
-              variant="outlined"
-              label={option.name}
-              size="small"
-              {...getTagProps({ index })}
-              key={option.id}
-            />
-          ))
-        }
-        sx={{ flex: 1 }}
-      />
-      <IconButton size="small" onClick={() => setNewTagDialogOpen(true)}>
-        <AddIcon />
-      </IconButton>
+  const handleToggleTag = (tag: Tag) => {
+    const isSelected = value.some((t) => t.id === tag.id);
+    if (isSelected) {
+      onChange(value.filter((t) => t.id !== tag.id));
+    } else {
+      onChange([...value, tag]);
+    }
+  };
 
-      <Dialog
-        open={newTagDialogOpen}
-        onClose={() => setNewTagDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Новый тег</DialogTitle>
+  return (
+    <div className="space-y-2">
+      <Label>Теги</Label>
+      <div className="flex items-center gap-2 flex-wrap">
+        {value.map((tag) => (
+          <Badge key={tag.id} variant="secondary" className="gap-1">
+            {tag.name}
+            <button
+              type="button"
+              onClick={() => handleToggleTag(tag)}
+              className="ml-1 hover:text-destructive"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Добавить тег
+        </Button>
+      </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Название тега"
-            fullWidth
-            value={newTagName}
-            onChange={(e) => setNewTagName(e.target.value)}
-          />
+          <DialogHeader>
+            <DialogTitle>Выберите теги</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2 py-4">
+            {allTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant={
+                  value.some((t) => t.id === tag.id) ? "default" : "outline"
+                }
+                className="cursor-pointer"
+                onClick={() => handleToggleTag(tag)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNewTagDialogOpen(true)}
+            >
+              Создать новый тег
+            </Button>
+            <Button type="button" onClick={() => setIsOpen(false)}>
+              Готово
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewTagDialogOpen(false)}>Отмена</Button>
-          <Button
-            onClick={handleCreateTag}
-            variant="contained"
-            disabled={!newTagName.trim()}
-          >
-            Добавить
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+
+      <Dialog open={newTagDialogOpen} onOpenChange={setNewTagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Новый тег</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              autoFocus
+              placeholder="Название тега"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newTagName.trim()) {
+                  handleCreateTag();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setNewTagDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateTag}
+              disabled={!newTagName.trim()}
+            >
+              Добавить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

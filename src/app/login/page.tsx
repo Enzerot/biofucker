@@ -3,15 +3,11 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  Box,
-  Container,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Alert,
-} from "@mui/material";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,68 +43,56 @@ export default function LoginPage() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          py: 4,
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Биофакер
-          </Typography>
-          <Typography component="h2" variant="h5" align="center" mb={3}>
-            Вход в систему
-          </Typography>
-
+    <div className="flex items-center justify-center min-h-screen py-8 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl mb-2">Биофакер</CardTitle>
+          <p className="text-xl text-muted-foreground">Вход в систему</p>
+        </CardHeader>
+        <CardContent>
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <div className="flex items-center gap-2 p-3 mb-4 text-sm text-red-400 bg-red-950/50 border border-red-800 rounded-md">
+              <AlertCircle className="h-4 w-4" />
               {error}
-            </Alert>
+            </div>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="username"
-              label="Имя пользователя"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Пароль"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Имя пользователя</Label>
+              <Input
+                id="username"
+                name="username"
+                autoComplete="username"
+                autoFocus
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
             <Button
               type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              className="w-full"
+              size="lg"
               disabled={isLoading}
             >
               {isLoading ? "Вход..." : "Войти"}
             </Button>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

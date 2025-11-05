@@ -6,7 +6,6 @@ import { DailyEntry, Supplement } from "./types";
 import AddEntry from "./components/AddEntry";
 import DailyEntries from "./components/DailyEntries";
 import AddSupplement from "./components/AddSupplement";
-import { Container, Grid, Box, Stack } from "@mui/material";
 import { isToday } from "date-fns";
 
 export default function Home() {
@@ -52,26 +51,24 @@ export default function Home() {
   };
 
   return (
-    <Box sx={{ py: 4 }}>
-      <Container maxWidth="xl">
-        <Grid container spacing={4}>
-          <Grid item xs={12} lg={6}>
-            <Stack spacing={4}>
-              <Box className="add-entry-form">
-                <AddEntry
-                  supplements={supplements}
-                  entries={entries}
-                  onSuccess={onDataChange}
-                  editEntry={editingEntry}
-                  onEdit={handleEdit}
-                  onCancelEdit={() => setEditingEntry(undefined)}
-                />
-              </Box>
-              <AddSupplement onSuccess={onDataChange} />
-            </Stack>
-          </Grid>
+    <div className="py-8">
+      <div className="container mx-auto max-w-7xl px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-8">
+            <div className="add-entry-form">
+              <AddEntry
+                supplements={supplements}
+                entries={entries}
+                onSuccess={onDataChange}
+                editEntry={editingEntry}
+                onEdit={handleEdit}
+                onCancelEdit={() => setEditingEntry(undefined)}
+              />
+            </div>
+            <AddSupplement onSuccess={onDataChange} />
+          </div>
 
-          <Grid item xs={12} lg={6}>
+          <div>
             <DailyEntries
               entries={entries}
               supplements={supplements}
@@ -79,9 +76,9 @@ export default function Home() {
               onEdit={handleEdit}
               isLoading={isLoading}
             />
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

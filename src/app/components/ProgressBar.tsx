@@ -30,7 +30,7 @@ export function ProgressBarProvider({ children }: PropsWithChildren) {
       {children}
       <ProgressBar
         height="4px"
-        color="#ffffff"
+        color="hsl(217.2 91.2% 59.8%)"
         options={{
           showSpinner: false,
           easing: "ease",

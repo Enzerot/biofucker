@@ -4,43 +4,28 @@ import { deleteSupplement, toggleSupplementVisibility } from "../actions";
 import { useState, useMemo } from "react";
 import { Supplement } from "../types";
 import { useNotification } from "../contexts/NotificationContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-  Stack,
-  Paper,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
-  Button,
   Tooltip,
-  TextField,
-  Select,
-  MenuItem,
-  Collapse,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  ListItemText,
-  Checkbox,
-} from "@mui/material";
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Search as SearchIcon,
-  Sort as SortIcon,
-  Clear as ClearIcon,
-  Timeline as TimelineIcon,
-} from "@mui/icons-material";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Edit, Trash2, Eye, EyeOff, Search, X, LineChart } from "lucide-react";
 import SupplementChart from "./SupplementChart";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SupplementStatsProps {
   supplements: Supplement[];
@@ -171,304 +156,272 @@ export default function SupplementStats({
     });
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-            mt: 2,
-          }}
-        >
-          <Typography variant="h5" component="h2" sx={{ fontWeight: "bold" }}>
-            Список добавок
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Tooltip title="Очистить фильтры">
-              <IconButton
-                onClick={handleClearFilters}
-                color="default"
-                size="small"
-                sx={{
-                  visibility:
-                    searchQuery ||
-                    selectedTags.length > 0 ||
-                    sortType !== "difference"
-                      ? "visible"
-                      : "hidden",
-                }}
-              >
-                <ClearIcon />
-              </IconButton>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Список добавок</h2>
+          <div className="flex gap-2">
+            {(searchQuery ||
+              selectedTags.length > 0 ||
+              sortType !== "difference") && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleClearFilters}
+                    variant="ghost"
+                    size="icon"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Очистить фильтры</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant={showFilters ? "default" : "ghost"}
+                  size="icon"
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Поиск и сортировка</p>
+              </TooltipContent>
             </Tooltip>
-            <Tooltip title="Поиск и сортировка">
-              <IconButton
-                onClick={() => setShowFilters(!showFilters)}
-                color={showFilters ? "primary" : "default"}
-              >
-                <SearchIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
+          </div>
+        </div>
 
-        <Collapse in={showFilters}>
-          <Box sx={{ mb: 3, display: "flex", gap: 2, flexDirection: "column" }}>
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                size="small"
-                label="Поиск"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                fullWidth
-                placeholder="Поиск по названию, тегам или описанию"
-              />
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Сортировка</InputLabel>
+        {showFilters && (
+          <div className="mb-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Поиск</Label>
+                <Input
+                  placeholder="Поиск по названию, тегам или описанию"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Сортировка</Label>
                 <Select
                   value={sortType}
                   onChange={(e) => setSortType(e.target.value)}
-                  label="Сортировка"
                 >
-                  <MenuItem value="rating">По рейтингу (↓)</MenuItem>
-                  <MenuItem value="rating_asc">По рейтингу (↑)</MenuItem>
-                  <MenuItem value="difference">По разнице (↓)</MenuItem>
-                  <MenuItem value="difference_asc">По разнице (↑)</MenuItem>
-                  <MenuItem value="name">По названию (А-Я)</MenuItem>
-                  <MenuItem value="name_desc">По названию (Я-А)</MenuItem>
-                  <MenuItem value="tags">По количеству тегов (↓)</MenuItem>
-                  <MenuItem value="tags_asc">По количеству тегов (↑)</MenuItem>
+                  <option value="rating">По рейтингу (↓)</option>
+                  <option value="rating_asc">По рейтингу (↑)</option>
+                  <option value="difference">По разнице (↓)</option>
+                  <option value="difference_asc">По разнице (↑)</option>
+                  <option value="name">По названию (А-Я)</option>
+                  <option value="name_desc">По названию (Я-А)</option>
+                  <option value="tags">По количеству тегов (↓)</option>
+                  <option value="tags_asc">По количеству тегов (↑)</option>
                 </Select>
-              </FormControl>
-            </Box>
+              </div>
+            </div>
 
-            <FormControl size="small" fullWidth>
-              <InputLabel>Фильтр по тегам</InputLabel>
-              <Select
-                multiple
-                value={selectedTags}
-                onChange={(e) =>
-                  setSelectedTags(
-                    typeof e.target.value === "string" ? [] : e.target.value
-                  )
-                }
-                input={<OutlinedInput label="Фильтр по тегам" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                    {selected.map((tagId) => (
-                      <Chip
-                        key={tagId}
-                        label={allTags.find((t) => t.id === tagId)?.name}
-                        size="small"
-                      />
-                    ))}
-                  </Box>
-                )}
-              >
-                {allTags.map((tag) => (
-                  <MenuItem key={tag.id} value={tag.id}>
-                    <Checkbox checked={selectedTags.includes(tag.id)} />
-                    <ListItemText primary={tag.name} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        </Collapse>
+            {allTags.length > 0 && (
+              <div className="space-y-2">
+                <Label>Фильтр по тегам</Label>
+                <div className="flex flex-wrap gap-2">
+                  {allTags.map((tag) => {
+                    const isSelected = selectedTags.includes(tag.id);
+                    return (
+                      <div
+                        key={tag.id}
+                        className="flex items-center gap-2 border rounded-md px-3 py-2"
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedTags([...selectedTags, tag.id]);
+                            } else {
+                              setSelectedTags(
+                                selectedTags.filter((id) => id !== tag.id)
+                              );
+                            }
+                          }}
+                        />
+                        <Label className="cursor-pointer">{tag.name}</Label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        <Stack spacing={2}>
+        <div className="space-y-4">
           {filteredAndSortedSupplements.map((supplement) => (
-            <Paper
+            <div
               key={supplement.id}
-              elevation={0}
-              variant="outlined"
-              sx={{
-                p: 2,
-                display: "flex",
-                justifyContent: "space-between",
-                opacity: supplement.hidden ? 0.5 : 1,
-              }}
+              className={`border rounded-lg p-4 flex justify-between ${
+                supplement.hidden ? "opacity-50" : ""
+              }`}
             >
-              <Box sx={{ flex: 1 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    mb: 0.5,
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    component="h3"
-                    sx={{ fontWeight: "medium", mr: 2 }}
-                  >
-                    {supplement.name}
-                  </Typography>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-lg font-medium">{supplement.name}</h3>
                   {supplement.average_rating && (
-                    <Chip
-                      label={`${supplement.average_rating}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
+                    <Badge variant="outline">{supplement.average_rating}</Badge>
                   )}
                   {!!supplement.rating_difference && (
-                    <Tooltip
-                      title={`Разница в рейтинге между днями с добавкой и без неё: ${
-                        supplement.rating_difference > 0 ? "+" : ""
-                      }${supplement.rating_difference.toFixed(1)}`}
-                    >
-                      <Chip
-                        label={
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <span style={{ marginRight: 4 }}>
-                              {supplement.rating_difference > 0 ? "↗" : "↘"}
-                            </span>
-                            <span>
-                              {Math.abs(supplement.rating_difference).toFixed(
-                                1
-                              )}
-                            </span>
-                          </Box>
-                        }
-                        size="small"
-                        color={
-                          supplement.rating_difference > 0 ? "success" : "error"
-                        }
-                        variant="outlined"
-                        sx={{ ml: 0.5 }}
-                      />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Badge
+                            variant={
+                              supplement.rating_difference > 0
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {supplement.rating_difference > 0 ? "↗" : "↘"}{" "}
+                            {Math.abs(supplement.rating_difference).toFixed(1)}
+                          </Badge>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Разница в рейтинге между днями с добавкой и без неё:{" "}
+                          {supplement.rating_difference > 0 ? "+" : ""}
+                          {supplement.rating_difference.toFixed(1)}
+                        </p>
+                      </TooltipContent>
                     </Tooltip>
                   )}
-                </Box>
+                </div>
                 {supplement.description && (
-                  <Typography variant="body2" color="text.secondary">
+                  <p className="text-sm text-muted-foreground mb-2">
                     {supplement.description}
-                  </Typography>
+                  </p>
                 )}
                 {supplement.tags && supplement.tags.length > 0 && (
-                  <Box
-                    sx={{
-                      mt: 1,
-                      display: "flex",
-                      gap: 0.5,
-                      flexWrap: "wrap",
-                    }}
-                  >
+                  <div className="flex gap-1 flex-wrap">
                     {supplement.tags.map((tag) => (
-                      <Chip
+                      <Badge
                         key={tag.id}
-                        label={tag.name}
-                        size="small"
-                        variant="outlined"
+                        variant="secondary"
+                        className="cursor-pointer"
                         onClick={() => handleTagClick(tag.id)}
-                        sx={{ cursor: "pointer" }}
-                      />
+                      >
+                        {tag.name}
+                      </Badge>
                     ))}
-                  </Box>
+                  </div>
                 )}
-              </Box>
+              </div>
 
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  ml: 2,
-                }}
-              >
-                <Tooltip title="График оценок">
-                  <IconButton
-                    onClick={() => setChartSupplement(supplement)}
-                    color="primary"
-                    size="small"
-                  >
-                    <TimelineIcon />
-                  </IconButton>
+              <div className="flex items-center gap-1 ml-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => setChartSupplement(supplement)}
+                      variant="ghost"
+                      size="icon"
+                    >
+                      <LineChart className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>График оценок</p>
+                  </TooltipContent>
                 </Tooltip>
-                <Tooltip
-                  title={
-                    supplement.hidden ? "Показать добавку" : "Скрыть добавку"
-                  }
-                >
-                  <IconButton
-                    onClick={() => handleToggleVisibility(supplement)}
-                    color="default"
-                    size="small"
-                  >
-                    {supplement.hidden ? (
-                      <VisibilityOffIcon />
-                    ) : (
-                      <VisibilityIcon />
-                    )}
-                  </IconButton>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleToggleVisibility(supplement)}
+                      variant="ghost"
+                      size="icon"
+                    >
+                      {supplement.hidden ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {supplement.hidden
+                        ? "Показать добавку"
+                        : "Скрыть добавку"}
+                    </p>
+                  </TooltipContent>
                 </Tooltip>
-                <IconButton
+                <Button
                   onClick={() => onEdit(supplement)}
-                  color="primary"
-                  size="small"
+                  variant="ghost"
+                  size="icon"
                 >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
                   onClick={() => setDeleteConfirmId(supplement.id)}
-                  color="error"
-                  size="small"
+                  variant="ghost"
+                  size="icon"
                 >
-                  <DeleteIcon />
-                </IconButton>
-              </Box>
-            </Paper>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
           ))}
-        </Stack>
+        </div>
       </CardContent>
 
-      {/* Диалог подтверждения удаления */}
       <Dialog
         open={deleteConfirmId !== null}
-        onClose={() => setDeleteConfirmId(null)}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
       >
-        <DialogTitle>Подтверждение удаления</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Вы уверены, что хотите удалить эту добавку? Это действие нельзя
-            отменить.
-          </DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Подтверждение удаления</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить эту добавку? Это действие нельзя
+              отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              variant="destructive"
+            >
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmId(null)}>Отмена</Button>
-          <Button
-            onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
-            color="error"
-            variant="contained"
-          >
-            Удалить
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Диалог с графиком */}
       <Dialog
         open={chartSupplement !== null}
-        onClose={() => setChartSupplement(null)}
-        maxWidth="md"
-        fullWidth
+        onOpenChange={(open) => !open && setChartSupplement(null)}
       >
-        <DialogTitle>График оценок: {chartSupplement?.name}</DialogTitle>
-        <DialogContent>
-          {chartSupplement && (
-            <SupplementChart
-              supplementId={chartSupplement.id}
-              supplementName={chartSupplement.name}
-            />
-          )}
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>График оценок: {chartSupplement?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {chartSupplement && (
+              <SupplementChart
+                supplementId={chartSupplement.id}
+                supplementName={chartSupplement.name}
+              />
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setChartSupplement(null)}>Закрыть</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setChartSupplement(null)}>Закрыть</Button>
-        </DialogActions>
       </Dialog>
     </Card>
   );
