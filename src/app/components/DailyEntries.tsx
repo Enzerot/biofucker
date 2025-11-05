@@ -18,6 +18,7 @@ import {
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Edit, Trash2, Moon, Sun, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DailyEntriesProps {
   entries: DailyEntry[];
@@ -25,6 +26,7 @@ interface DailyEntriesProps {
   onSuccess: () => void;
   onEdit: (entry: DailyEntry) => void;
   isLoading: boolean;
+  editingEntry?: DailyEntry;
 }
 
 export default function DailyEntries({
@@ -33,6 +35,7 @@ export default function DailyEntries({
   onSuccess,
   onEdit,
   isLoading,
+  editingEntry,
 }: DailyEntriesProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<DailyEntry | null>(null);
@@ -74,7 +77,10 @@ export default function DailyEntries({
 
       <div className={`space-y-4 ${isLoading ? "opacity-90" : ""}`}>
         {sortedEntries.map((entry) => (
-          <Card key={entry.id}>
+          <Card key={entry.id} className={cn(
+            "transition-all duration-200",
+            editingEntry?.id === entry.id && "ring-2 ring-primary shadow-lg"
+          )}>
             <CardContent className="pt-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">

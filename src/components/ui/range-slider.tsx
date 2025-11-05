@@ -21,9 +21,16 @@ export function RangeSlider({
   valueLabelFormat,
 }: RangeSliderProps) {
   const [isDragging, setIsDragging] = React.useState<0 | 1 | null>(null);
+  const [tempValue, setTempValue] = React.useState<[number, number]>(value);
   const sliderRef = React.useRef<HTMLDivElement>(null);
 
-  const getValueFromPosition = (clientX: number) => {
+  React.useEffect(() => {
+    if (isDragging === null) {
+      setTempValue(value);
+    }
+  }, [value, isDragging]);
+
+  const getValueFromPosition = (clientX: number, shouldRound: boolean = true) => {
     if (!sliderRef.current) return min;
     const rect = sliderRef.current.getBoundingClientRect();
     const percentage = Math.max(
@@ -31,7 +38,7 @@ export function RangeSlider({
       Math.min(1, (clientX - rect.left) / rect.width)
     );
     const rawValue = min + percentage * (max - min);
-    return Math.round(rawValue / step) * step;
+    return shouldRound ? Math.round(rawValue / step) * step : rawValue;
   };
 
   const handleMouseDown = (index: 0 | 1) => (e: React.MouseEvent) => {
@@ -43,15 +50,20 @@ export function RangeSlider({
     if (isDragging === null) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newValue = getValueFromPosition(e.clientX);
+      const newValue = getValueFromPosition(e.clientX, false);
       if (isDragging === 0) {
-        onChange([Math.min(newValue, value[1]), value[1]]);
+        setTempValue([Math.min(newValue, tempValue[1]), tempValue[1]]);
       } else {
-        onChange([value[0], Math.max(newValue, value[0])]);
+        setTempValue([tempValue[0], Math.max(newValue, tempValue[0])]);
       }
     };
 
     const handleMouseUp = () => {
+      const roundedValue: [number, number] = [
+        Math.round(tempValue[0] / step) * step,
+        Math.round(tempValue[1] / step) * step,
+      ];
+      onChange(roundedValue);
       setIsDragging(null);
     };
 
@@ -62,10 +74,11 @@ export function RangeSlider({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, value, onChange]);
+  }, [isDragging, tempValue, onChange, step]);
 
-  const percentage0 = ((value[0] - min) / (max - min)) * 100;
-  const percentage1 = ((value[1] - min) / (max - min)) * 100;
+  const displayValue = isDragging !== null ? tempValue : value;
+  const percentage0 = ((displayValue[0] - min) / (max - min)) * 100;
+  const percentage1 = ((displayValue[1] - min) / (max - min)) * 100;
 
   return (
     <div className="relative py-4">
@@ -83,30 +96,34 @@ export function RangeSlider({
 
         <div
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full cursor-grab shadow-md",
+            "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full cursor-grab shadow-md transition-transform duration-150 ease-out",
             isDragging === 0 && "cursor-grabbing scale-110"
           )}
-          style={{ left: `${percentage0}%` }}
+          style={{ 
+            left: `${percentage0}%`,
+          }}
           onMouseDown={handleMouseDown(0)}
         >
           {isDragging === 0 && valueLabelFormat && (
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap">
-              {valueLabelFormat(value[0])}
+              {valueLabelFormat(Math.round(displayValue[0] / step) * step)}
             </div>
           )}
         </div>
 
         <div
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full cursor-grab shadow-md",
+            "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-primary rounded-full cursor-grab shadow-md transition-transform duration-150 ease-out",
             isDragging === 1 && "cursor-grabbing scale-110"
           )}
-          style={{ left: `${percentage1}%` }}
+          style={{ 
+            left: `${percentage1}%`,
+          }}
           onMouseDown={handleMouseDown(1)}
         >
           {isDragging === 1 && valueLabelFormat && (
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap">
-              {valueLabelFormat(value[1])}
+              {valueLabelFormat(Math.round(displayValue[1] / step) * step)}
             </div>
           )}
         </div>

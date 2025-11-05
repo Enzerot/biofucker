@@ -51,11 +51,14 @@ export default function AddEntry({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isFitbitConnected, setIsFitbitConnected] = useState(false);
   const [sleepEfficiency, setSleepEfficiency] = useState<number | null>(null);
+  const [initialEditState, setInitialEditState] = useState<FormValues | null>(
+    null
+  );
   const { showNotification } = useNotification();
   const supplementsWithoutHidden = supplements.filter((s) => !s.hidden);
 
-  const { control, handleSubmit, reset, watch, setValue } = useForm<FormValues>(
-    {
+  const { control, handleSubmit, reset, watch, setValue, formState } =
+    useForm<FormValues>({
       defaultValues: {
         date: startOfDay(new Date()),
         rating: 5,
@@ -64,8 +67,7 @@ export default function AddEntry({
         sleepTime: "00:00",
         wakeTime: "08:00",
       },
-    }
-  );
+    });
 
   const date = watch("date");
 
@@ -216,14 +218,16 @@ export default function AddEntry({
       const { sleepTime, wakeTime } = extractTimeFromSupplements(
         editEntry.supplements
       );
-      reset({
+      const initialState = {
         date: entryDate,
         rating: editEntry.rating,
         notes: editEntry.notes || "",
         supplements: prepareSupplements(editEntry.supplements),
         sleepTime,
         wakeTime,
-      });
+      };
+      setInitialEditState(initialState);
+      reset(initialState);
     } else {
       const todayEntry = findEntryByDate(date);
 
@@ -317,8 +321,12 @@ export default function AddEntry({
   };
 
   const handleCancelEdit = () => {
-    onCancelEdit?.();
-    handleDateChange(startOfDay(new Date()));
+    if (isToday(date) && editEntry && initialEditState) {
+      reset(initialEditState);
+    } else {
+      onCancelEdit?.();
+      handleDateChange(startOfDay(new Date()));
+    }
   };
 
   const handleFitbitConnect = () => {
@@ -374,7 +382,7 @@ export default function AddEntry({
           </div>
 
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogContent className="p-0 max-w-fit">
+            <DialogContent className="pt-12 pb-3 px-3 max-w-fit">
               <Calendar
                 value={date}
                 onChange={(newDate) => newDate && handleDateChange(newDate)}
@@ -428,29 +436,34 @@ export default function AddEntry({
           </div>
 
           <div className="space-y-2">
-            <Label>
-              Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
-              {watch("wakeTime")}
-            </Label>
-            {!isFitbitConnected && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleFitbitConnect}
-                className="mb-2"
-              >
-                Подключить Fitbit
-              </Button>
-            )}
+            <div className="flex items-center justify-between gap-2">
+              <Label>
+                Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
+                {watch("wakeTime")}
+              </Label>
+              {!isFitbitConnected && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFitbitConnect}
+                >
+                  Подключить Fitbit
+                </Button>
+              )}
+            </div>
             <RangeSlider
               value={[
                 timeToMinutes(watch("sleepTime")),
                 timeToMinutes(watch("wakeTime")),
               ]}
               onChange={(value) => {
-                setValue("sleepTime", minutesToTime(value[0]));
-                setValue("wakeTime", minutesToTime(value[1]));
+                setValue("sleepTime", minutesToTime(value[0]), {
+                  shouldDirty: true,
+                });
+                setValue("wakeTime", minutesToTime(value[1]), {
+                  shouldDirty: true,
+                });
               }}
               min={0}
               max={1425}
@@ -526,7 +539,7 @@ export default function AddEntry({
                 variant="outline"
                 className="flex-1"
                 size="lg"
-                disabled={isToday(date)}
+                disabled={isToday(date) && !formState.isDirty}
               >
                 Отмена
               </Button>

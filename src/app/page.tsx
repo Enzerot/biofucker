@@ -75,6 +75,7 @@ export default function Home() {
               onSuccess={onDataChange}
               onEdit={handleEdit}
               isLoading={isLoading}
+              editingEntry={editingEntry}
             />
           </div>
         </div>
