@@ -4,6 +4,7 @@ import {
   serial,
   text,
   primaryKey,
+  real,
 } from "drizzle-orm/pg-core";
 
 export const supplements = pgTable("supplements", {
@@ -12,7 +13,7 @@ export const supplements = pgTable("supplements", {
   description: text("description"),
   hidden: integer("hidden").notNull().default(0),
   average_rating: integer("average_rating"),
-  rating_difference: integer("rating_difference"),
+  rating_difference: real("rating_difference"),
 });
 
 export const tags = pgTable("tags", {

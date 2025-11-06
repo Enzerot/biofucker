@@ -8,7 +8,7 @@
     "build": "next build",
     "dev": "next dev",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node -r dotenv/config -e 'require(\"./src/db/migrations.js\").runMigrations()'"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

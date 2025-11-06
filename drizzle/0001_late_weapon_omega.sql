@@ -1,0 +1,1 @@
+ALTER TABLE "supplements" ALTER COLUMN "rating_difference" SET DATA TYPE real;
