@@ -13,7 +13,6 @@ import {
   InsertDailyEntry,
 } from "../db/schema";
 import { and, eq, gte, lt, sql as drizzleSql } from "drizzle-orm";
-import { startOfDay, addDays, getUnixTime } from "date-fns";
 
 export async function addSupplement(
   name: string,
@@ -50,10 +49,12 @@ export async function addDailyEntry({
   notes: string;
   supplementIds: number[];
 }): Promise<DailyEntry> {
-  const date = startOfDay(new Date(dateTs));
-  const nextDay = addDays(date, 1);
-  const timestamp = getUnixTime(date);
-  const nextDayTimestamp = getUnixTime(nextDay);
+  const date = new Date(dateTs);
+  const timestamp = Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) /
+      1000
+  );
+  const nextDayTimestamp = timestamp + 86400;
 
   const existingEntries = await db
     .select()

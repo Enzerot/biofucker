@@ -304,8 +304,13 @@ export default function AddEntry({
         showNotification("Запись успешно обновлена");
         if (!isToday(data.date)) onCancelEdit?.();
       } else {
+        const dateInUtc = Date.UTC(
+          data.date.getFullYear(),
+          data.date.getMonth(),
+          data.date.getDate()
+        );
         await addDailyEntry({
-          dateTs: data.date.getTime(),
+          dateTs: dateInUtc,
           rating: data.rating,
           supplementIds: updatedSupplements,
           notes: data.notes,
