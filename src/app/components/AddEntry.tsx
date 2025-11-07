@@ -131,10 +131,10 @@ export default function AddEntry({
   };
 
   useEffect(() => {
-    if (isFitbitConnected) {
+    if (isFitbitConnected && !editEntry) {
       fetchFitbitSleepData();
     }
-  }, [date, isFitbitConnected]);
+  }, [date, isFitbitConnected, editEntry]);
 
   const timeToMinutes = (time?: string): number => {
     if (!time) return 0;
