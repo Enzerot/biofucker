@@ -9,9 +9,10 @@ import { Supplement, Tag, DailyEntry } from "@/db/schema";
 export async function addSupplement(
   name: string,
   description?: string,
-  hidden: boolean = false
+  hidden: boolean = false,
+  type: string = "regular"
 ): Promise<Supplement> {
-  return supplementsService.addSupplement(name, description, hidden);
+  return supplementsService.addSupplement(name, description, hidden, type);
 }
 
 export async function updateSupplement(
@@ -45,6 +46,13 @@ export async function getSupplementRatings(
   supplementId: number
 ): Promise<{ date: number; rating: number }[]> {
   return supplementsService.getSupplementRatings(supplementId);
+}
+
+export async function updateSupplementTags(
+  supplementId: number,
+  tagIds: number[]
+): Promise<void> {
+  return supplementsService.updateSupplementTags(supplementId, tagIds);
 }
 
 // Daily Entries

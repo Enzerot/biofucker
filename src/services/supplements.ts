@@ -31,7 +31,8 @@ export async function getSupplements(
 export async function addSupplement(
   name: string,
   description?: string,
-  hidden: boolean = false
+  hidden: boolean = false,
+  type: string = "regular"
 ): Promise<Supplement> {
   const insertedSupplements = await db
     .insert(supplements)
@@ -39,6 +40,7 @@ export async function addSupplement(
       name,
       description,
       hidden: hidden ? 1 : 0,
+      type,
     })
     .returning();
 
@@ -58,7 +60,8 @@ export async function updateSupplement(
 ): Promise<Supplement> {
   const { tags: newTags, ...updateData } = data;
 
-  const validUpdateData: Record<string, any> = {};
+  const validUpdateData: Partial<typeof supplements.$inferInsert> = {};
+
   if (updateData.name !== undefined) validUpdateData.name = updateData.name;
   if (updateData.description !== undefined)
     validUpdateData.description = updateData.description;
@@ -111,7 +114,7 @@ export async function hideSupplement(id: number): Promise<Supplement> {
   return getFullSupplement(id);
 }
 
-async function updateSupplementTags(
+export async function updateSupplementTags(
   supplementId: number,
   tagIds: number[]
 ): Promise<void> {

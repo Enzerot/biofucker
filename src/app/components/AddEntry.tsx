@@ -203,9 +203,9 @@ export default function AddEntry({
       let wakeTime = "08:00";
 
       supplements.forEach(({ supplement }) => {
-        if (supplement.name.startsWith("Время засыпания")) {
+        if (supplement.type === "sleep_start") {
           sleepTime = supplement.name.split(" ").pop() || sleepTime;
-        } else if (supplement.name.startsWith("Время пробуждения")) {
+        } else if (supplement.type === "sleep_end") {
           wakeTime = supplement.name.split(" ").pop() || wakeTime;
         }
       });
@@ -265,8 +265,8 @@ export default function AddEntry({
         const supplement = supplements.find((s) => s.id === id);
         return (
           supplement &&
-          !supplement.name.startsWith("Время засыпания") &&
-          !supplement.name.startsWith("Время пробуждения")
+          supplement.type !== "sleep_start" &&
+          supplement.type !== "sleep_end"
         );
       });
 
@@ -279,11 +279,11 @@ export default function AddEntry({
 
       const sleepSupplement =
         existingSleepSupplement ||
-        (await addSupplement(sleepSupplementName, undefined, true));
+        (await addSupplement(sleepSupplementName, undefined, true, "sleep_start"));
 
       const wakeSupplement =
         existingWakeSupplement ||
-        (await addSupplement(wakeSupplementName, undefined, true));
+        (await addSupplement(wakeSupplementName, undefined, true, "sleep_end"));
 
       if (!sleepSupplement || !wakeSupplement) {
         throw new Error("Failed to create supplements");

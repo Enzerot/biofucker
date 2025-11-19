@@ -12,6 +12,7 @@ export const supplements = pgTable("supplements", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull().default("regular"), // 'regular', 'sleep_start', 'sleep_end'
   hidden: integer("hidden").notNull().default(0),
   average_rating: integer("average_rating"),
   rating_difference: real("rating_difference"),

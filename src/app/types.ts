@@ -2,6 +2,7 @@ export interface Supplement {
   id: number;
   name: string;
   description: string | null;
+  type: string;
   hidden: number;
   average_rating: number | null;
   rating_difference: number | null;

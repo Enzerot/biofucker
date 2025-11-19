@@ -8,37 +8,45 @@ import {
 import { eq, and, gte, lt, desc } from "drizzle-orm";
 import { updateSupplementRatings } from "./supplements";
 
-export async function getDailyEntries(): Promise<DailyEntry[]> {
-  try {
-    const entries = await db.query.dailyEntries.findMany({
-      orderBy: [desc(dailyEntries.date)],
+const dailyEntryWithRelations = {
+  with: {
+    supplements: {
       with: {
-        supplements: {
+        supplement: {
           with: {
-            supplement: {
+            tags: {
               with: {
-                tags: {
-                  with: {
-                    tag: true,
-                  },
-                },
+                tag: true,
               },
             },
           },
         },
       },
+    },
+  },
+} as const;
+
+function mapToDailyEntry(entry: any): DailyEntry {
+  return {
+    ...entry,
+    date: entry.date * 1000, // Конвертация из Unix timestamp (sec) в JS timestamp (ms)
+    supplements: entry.supplements.map((s: any) => ({
+      supplement: {
+        ...s.supplement,
+        tags: s.supplement.tags.map((t: any) => t.tag),
+      },
+    })),
+  };
+}
+
+export async function getDailyEntries(): Promise<DailyEntry[]> {
+  try {
+    const entries = await db.query.dailyEntries.findMany({
+      orderBy: [desc(dailyEntries.date)],
+      ...dailyEntryWithRelations,
     });
 
-    return entries.map((entry) => ({
-      ...entry,
-      date: entry.date * 1000, // Конвертация из Unix timestamp (sec) в JS timestamp (ms)
-      supplements: entry.supplements.map((s) => ({
-        supplement: {
-          ...s.supplement,
-          tags: s.supplement.tags.map((t) => t.tag),
-        },
-      })),
-    }));
+    return entries.map(mapToDailyEntry);
   } catch (error) {
     console.error("Ошибка при получении записей:", error);
     throw error;
@@ -50,35 +58,12 @@ export async function getDailyEntry(
 ): Promise<DailyEntry | null> {
   const entry = await db.query.dailyEntries.findFirst({
     where: eq(dailyEntries.id, entryId),
-    with: {
-      supplements: {
-        with: {
-          supplement: {
-            with: {
-              tags: {
-                with: {
-                  tag: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    ...dailyEntryWithRelations,
   });
 
   if (!entry) return null;
 
-  return {
-    ...entry,
-    date: entry.date * 1000,
-    supplements: entry.supplements.map((s) => ({
-      supplement: {
-        ...s.supplement,
-        tags: s.supplement.tags.map((t) => t.tag),
-      },
-    })),
-  };
+  return mapToDailyEntry(entry);
 }
 
 export async function addDailyEntry({
