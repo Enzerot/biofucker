@@ -10,7 +10,12 @@ import {
 import { useNotification } from "../contexts/NotificationContext";
 import { Supplement, Tag } from "../types";
 import TagsInput from "./TagsInput";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -26,12 +31,16 @@ interface AddSupplementProps {
   onSuccess: () => void;
   editSupplement?: Supplement;
   onCancelEdit?: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export default function AddSupplement({
   onSuccess,
   editSupplement,
   onCancelEdit,
+  open,
+  onOpenChange,
 }: AddSupplementProps) {
   const { showNotification } = useNotification();
   const { control, handleSubmit, reset } = useForm<FormValues>({
@@ -56,7 +65,7 @@ export default function AddSupplement({
         tags: [],
       });
     }
-  }, [editSupplement, reset]);
+  }, [editSupplement, reset, open]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -81,6 +90,7 @@ export default function AddSupplement({
         reset();
       }
       onSuccess();
+      onOpenChange(false);
     } catch (error) {
       console.error("Error with supplement:", error);
       showNotification("Ошибка при сохранении добавки", "error");
@@ -88,13 +98,13 @@ export default function AddSupplement({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {editSupplement ? "Редактирование добавки" : "Новая добавка"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {editSupplement ? "Редактирование добавки" : "Новая добавка"}
+          </DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Название добавки</Label>
@@ -140,23 +150,22 @@ export default function AddSupplement({
             <Button type="submit" className="flex-1" size="lg">
               {editSupplement ? "Сохранить" : "Добавить"}
             </Button>
-            {editSupplement && (
-              <Button
-                type="button"
-                onClick={() => {
-                  reset();
-                  onCancelEdit?.();
-                }}
-                variant="outline"
-                className="flex-1"
-                size="lg"
-              >
-                Отмена
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={() => {
+                reset();
+                onCancelEdit?.();
+                onOpenChange(false);
+              }}
+              variant="outline"
+              className="flex-1"
+              size="lg"
+            >
+              Отмена
+            </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { addDailyEntry, updateDailyEntry, addSupplement } from "../actions";
+import {
+  addDailyEntry,
+  updateDailyEntry,
+  addSupplement,
+  toggleSupplementVisibility,
+} from "../actions";
 import { Supplement, DailyEntry } from "../types";
 import { useNotification } from "../contexts/NotificationContext";
 import { startOfDay, format, isEqual, isToday, addDays } from "date-fns";
@@ -19,7 +24,20 @@ import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { RangeSlider } from "@/components/ui/range-slider";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Edit,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FormValues {
@@ -38,6 +56,8 @@ interface AddEntryProps {
   editEntry?: DailyEntry;
   onCancelEdit?: () => void;
   onEdit: (entry: DailyEntry | undefined) => void;
+  onEditSupplement: (supplement: Supplement) => void;
+  onAddSupplement: () => void;
 }
 
 export default function AddEntry({
@@ -47,6 +67,8 @@ export default function AddEntry({
   editEntry,
   onCancelEdit,
   onEdit,
+  onEditSupplement,
+  onAddSupplement,
 }: AddEntryProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isFitbitConnected, setIsFitbitConnected] = useState(false);
@@ -54,8 +76,12 @@ export default function AddEntry({
   const [initialEditState, setInitialEditState] = useState<FormValues | null>(
     null
   );
+  const [showHidden, setShowHidden] = useState(false);
   const { showNotification } = useNotification();
-  const supplementsWithoutHidden = supplements.filter((s) => !s.hidden);
+
+  const displaySupplements = (
+    showHidden ? supplements : supplements.filter((s) => !s.hidden)
+  ).filter((s) => s.type !== "sleep_start" && s.type !== "sleep_end");
 
   const { control, handleSubmit, reset, watch, setValue, formState } =
     useForm<FormValues>({
@@ -191,9 +217,11 @@ export default function AddEntry({
 
   useEffect(() => {
     const prepareSupplements = (supplements: { supplement: Supplement }[]) => {
-      return supplements
-        .filter((s) => !s.supplement.hidden)
-        .map((s) => s.supplement.id);
+      return (
+        supplements
+          // .filter((s) => !s.supplement.hidden) // Keep hidden supplements if they were in the entry
+          .map((s) => s.supplement.id)
+      );
     };
 
     const extractTimeFromSupplements = (
@@ -279,7 +307,12 @@ export default function AddEntry({
 
       const sleepSupplement =
         existingSleepSupplement ||
-        (await addSupplement(sleepSupplementName, undefined, true, "sleep_start"));
+        (await addSupplement(
+          sleepSupplementName,
+          undefined,
+          true,
+          "sleep_start"
+        ));
 
       const wakeSupplement =
         existingWakeSupplement ||
@@ -336,6 +369,19 @@ export default function AddEntry({
 
   const handleFitbitConnect = () => {
     window.location.href = "/api/fitbit/auth";
+  };
+
+  const handleToggleVisibility = async (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await toggleSupplementVisibility(id);
+      onSuccess();
+      showNotification("Видимость добавки изменена");
+    } catch (error) {
+      console.error("Error toggling visibility:", error);
+      showNotification("Ошибка при изменении видимости", "error");
+    }
   };
 
   return (
@@ -502,33 +548,115 @@ export default function AddEntry({
           </div>
 
           <div className="space-y-2">
-            <Label>Принятые добавки</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {supplementsWithoutHidden
+            <div className="flex items-center justify-between mb-2">
+              <Label>Принятые добавки</Label>
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowHidden(!showHidden)}
+                      >
+                        {showHidden ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {showHidden ? "Скрыть скрытые" : "Показать скрытые"}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={onAddSupplement}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Добавить добавку</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
+              {displaySupplements
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((supplement) => (
-                  <Controller
+                  <div
                     key={supplement.id}
-                    name="supplements"
-                    control={control}
-                    render={({ field }) => (
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <Checkbox
-                          checked={field.value.includes(supplement.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              field.onChange([...field.value, supplement.id]);
-                            } else {
-                              field.onChange(
-                                field.value.filter((id) => id !== supplement.id)
-                              );
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{supplement.name}</span>
-                      </label>
-                    )}
-                  />
+                    className="flex items-center justify-between group hover:bg-accent/50 px-2 py-1 rounded-md transition-colors"
+                  >
+                    <Controller
+                      name="supplements"
+                      control={control}
+                      render={({ field }) => (
+                        <label className="flex items-center gap-2 cursor-pointer flex-1">
+                          <Checkbox
+                            checked={field.value.includes(supplement.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...field.value, supplement.id]);
+                              } else {
+                                field.onChange(
+                                  field.value.filter(
+                                    (id) => id !== supplement.id
+                                  )
+                                );
+                              }
+                            }}
+                          />
+                          <span
+                            className={cn(
+                              "text-sm",
+                              !!supplement.hidden &&
+                                "text-muted-foreground line-through decoration-gray-400"
+                            )}
+                          >
+                            {supplement.name}
+                          </span>
+                        </label>
+                      )}
+                    />
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onEditSupplement(supplement);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) =>
+                          handleToggleVisibility(e, supplement.id)
+                        }
+                      >
+                        {supplement.hidden ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 ))}
             </div>
           </div>

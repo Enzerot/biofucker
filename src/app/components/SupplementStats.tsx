@@ -23,7 +23,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Edit, Trash2, Eye, EyeOff, Search, X, LineChart } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Search,
+  X,
+  LineChart,
+  Plus,
+  Filter,
+} from "lucide-react";
 import SupplementChart from "./SupplementChart";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -31,12 +41,14 @@ interface SupplementStatsProps {
   supplements: Supplement[];
   onSuccess: () => void;
   onEdit: (supplement: Supplement) => void;
+  onAdd: () => void;
 }
 
 export default function SupplementStats({
   supplements,
   onSuccess,
   onEdit,
+  onAdd,
 }: SupplementStatsProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [chartSupplement, setChartSupplement] = useState<Supplement | null>(
@@ -158,71 +170,83 @@ export default function SupplementStats({
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Список добавок</h2>
-          <div className="flex gap-2">
-            {(searchQuery ||
-              selectedTags.length > 0 ||
-              sortType !== "difference") && (
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Список добавок</h2>
+            <div className="flex gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleClearFilters}
-                    variant="ghost"
-                    size="icon"
-                  >
-                    <X className="h-4 w-4" />
+                  <Button onClick={onAdd} variant="outline" size="icon">
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Очистить фильтры</p>
+                  <p>Добавить добавку</p>
                 </TooltipContent>
               </Tooltip>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => setShowFilters(!showFilters)}
-                  variant={showFilters ? "default" : "ghost"}
-                  size="icon"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Поиск и сортировка</p>
-              </TooltipContent>
-            </Tooltip>
+              {(searchQuery ||
+                selectedTags.length > 0 ||
+                sortType !== "difference") && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleClearFilters}
+                      variant="outline"
+                      size="icon"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Очистить фильтры</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => setShowFilters(!showFilters)}
+                    variant="outline"
+                    size="icon"
+                  >
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Фильтры и сортировка</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по названию, тегам или описанию"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
           </div>
         </div>
 
         {showFilters && (
           <div className="mb-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Поиск</Label>
-                <Input
-                  placeholder="Поиск по названию, тегам или описанию"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Сортировка</Label>
-                <Select
-                  value={sortType}
-                  onChange={(e) => setSortType(e.target.value)}
-                >
-                  <option value="rating">По рейтингу (↓)</option>
-                  <option value="rating_asc">По рейтингу (↑)</option>
-                  <option value="difference">По разнице (↓)</option>
-                  <option value="difference_asc">По разнице (↑)</option>
-                  <option value="name">По названию (А-Я)</option>
-                  <option value="name_desc">По названию (Я-А)</option>
-                  <option value="tags">По количеству тегов (↓)</option>
-                  <option value="tags_asc">По количеству тегов (↑)</option>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Сортировка</Label>
+              <Select
+                value={sortType}
+                onChange={(e) => setSortType(e.target.value)}
+              >
+                <option value="rating">По рейтингу (↓)</option>
+                <option value="rating_asc">По рейтингу (↑)</option>
+                <option value="difference">По разнице (↓)</option>
+                <option value="difference_asc">По разнице (↑)</option>
+                <option value="name">По названию (А-Я)</option>
+                <option value="name_desc">По названию (Я-А)</option>
+                <option value="tags">По количеству тегов (↓)</option>
+                <option value="tags_asc">По количеству тегов (↑)</option>
+              </Select>
             </div>
 
             {allTags.length > 0 && (

@@ -11,6 +11,7 @@ export default function SupplementsPage() {
   const [editingSupplement, setEditingSupplement] = useState<
     Supplement | undefined
   >(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadData = async () => {
     const newSupplements = await getSupplements();
@@ -27,7 +28,7 @@ export default function SupplementsPage() {
 
   const handleEdit = (supplement: Supplement) => {
     setEditingSupplement(supplement);
-    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    setIsModalOpen(true);
   };
 
   return (
@@ -38,11 +39,17 @@ export default function SupplementsPage() {
             onSuccess={onDataChange}
             editSupplement={editingSupplement}
             onCancelEdit={() => setEditingSupplement(undefined)}
+            open={isModalOpen}
+            onOpenChange={setIsModalOpen}
           />
           <SupplementStats
             supplements={supplements}
             onSuccess={onDataChange}
             onEdit={handleEdit}
+            onAdd={() => {
+              setEditingSupplement(undefined);
+              setIsModalOpen(true);
+            }}
           />
         </div>
       </div>

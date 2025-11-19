@@ -15,6 +15,10 @@ export default function Home() {
   const [editingEntry, setEditingEntry] = useState<DailyEntry | undefined>(
     undefined
   );
+  const [isSupplementModalOpen, setIsSupplementModalOpen] = useState(false);
+  const [editingSupplement, setEditingSupplement] = useState<
+    Supplement | undefined
+  >(undefined);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -63,9 +67,16 @@ export default function Home() {
                 editEntry={editingEntry}
                 onEdit={handleEdit}
                 onCancelEdit={() => setEditingEntry(undefined)}
+                onEditSupplement={(s) => {
+                  setEditingSupplement(s);
+                  setIsSupplementModalOpen(true);
+                }}
+                onAddSupplement={() => {
+                  setEditingSupplement(undefined);
+                  setIsSupplementModalOpen(true);
+                }}
               />
             </div>
-            <AddSupplement onSuccess={onDataChange} />
           </div>
 
           <div>
@@ -80,6 +91,14 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <AddSupplement
+        onSuccess={onDataChange}
+        editSupplement={editingSupplement}
+        open={isSupplementModalOpen}
+        onOpenChange={setIsSupplementModalOpen}
+        onCancelEdit={() => setEditingSupplement(undefined)}
+      />
     </div>
   );
 }
