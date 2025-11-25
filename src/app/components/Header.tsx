@@ -13,6 +13,7 @@ export default function Header() {
   const pages = [
     { title: "Дневник", path: "/" },
     { title: "Добавки", path: "/supplements" },
+    { title: "Интеграции", path: "/integrations" },
   ];
 
   return (

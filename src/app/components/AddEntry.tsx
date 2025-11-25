@@ -13,7 +13,6 @@ import { useNotification } from "../contexts/NotificationContext";
 import { startOfDay, format, isEqual, isToday, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
 import { format as formatDate } from "date-fns";
-import { FitbitSleepData } from "../types/fitbit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +59,8 @@ interface AddEntryProps {
   onAddSupplement: () => void;
 }
 
+type SleepSource = "fitbit" | "whoop" | "none";
+
 export default function AddEntry({
   supplements,
   entries,
@@ -71,7 +72,7 @@ export default function AddEntry({
   onAddSupplement,
 }: AddEntryProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [isFitbitConnected, setIsFitbitConnected] = useState(false);
+  const [activeSource, setActiveSource] = useState<SleepSource>("none");
   const [sleepEfficiency, setSleepEfficiency] = useState<number | null>(null);
   const [initialEditState, setInitialEditState] = useState<FormValues | null>(
     null
@@ -98,16 +99,16 @@ export default function AddEntry({
   const date = watch("date");
 
   useEffect(() => {
-    const checkFitbitConnection = async () => {
+    const checkIntegrationStatus = async () => {
       try {
-        const response = await fetch("/api/fitbit/status");
-        const { isConnected } = await response.json();
-        setIsFitbitConnected(isConnected);
+        const response = await fetch("/api/integrations");
+        const data = await response.json();
+        setActiveSource(data.activeSource);
       } catch (error) {
-        console.error("Error checking Fitbit connection:", error);
+        console.error("Error checking integration status:", error);
       }
     };
-    checkFitbitConnection();
+    checkIntegrationStatus();
   }, []);
 
   const roundToNearestQuarter = (timeStr: string): string => {
@@ -121,46 +122,45 @@ export default function AddEntry({
       .padStart(2, "0")}`;
   };
 
-  const fetchFitbitSleepData = async () => {
+  const fetchSleepData = async () => {
     try {
       const dateStr = formatDate(date, "yyyy-MM-dd");
-      const response = await fetch(`/api/fitbit/sleep?date=${dateStr}`);
+      const response = await fetch(`/api/sleep?date=${dateStr}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch sleep data");
       }
 
-      const sleepData = (await response.json()) as FitbitSleepData;
+      const data = await response.json();
 
-      if (sleepData) {
+      if (data.startTime && data.endTime) {
         const sleepTime = roundToNearestQuarter(
-          sleepData.startTime.split("T")[1].substring(0, 5)
+          data.startTime.split("T")[1].substring(0, 5)
         );
         const wakeTime = roundToNearestQuarter(
-          sleepData.endTime.split("T")[1].substring(0, 5)
+          data.endTime.split("T")[1].substring(0, 5)
         );
 
         setValue("sleepTime", sleepTime);
         setValue("wakeTime", wakeTime);
-        setSleepEfficiency(sleepData.efficiency);
+        setSleepEfficiency(data.efficiency);
 
-        showNotification("Данные о сне успешно загружены из Fitbit", "success");
+        const sourceName = data.source === "fitbit" ? "Fitbit" : "WHOOP";
+        showNotification(`Данные о сне загружены из ${sourceName}`, "success");
       } else {
         setSleepEfficiency(null);
-        showNotification("Данные о сне не найдены для выбранной даты", "error");
       }
     } catch (error) {
-      console.error("Error fetching Fitbit sleep data:", error);
+      console.error("Error fetching sleep data:", error);
       setSleepEfficiency(null);
-      showNotification("Ошибка при загрузке данных из Fitbit", "error");
     }
   };
 
   useEffect(() => {
-    if (isFitbitConnected && !editEntry) {
-      fetchFitbitSleepData();
+    if (activeSource !== "none" && !editEntry) {
+      fetchSleepData();
     }
-  }, [date, isFitbitConnected, editEntry]);
+  }, [date, activeSource, editEntry]);
 
   const timeToMinutes = (time?: string): number => {
     if (!time) return 0;
@@ -367,10 +367,6 @@ export default function AddEntry({
     }
   };
 
-  const handleFitbitConnect = () => {
-    window.location.href = "/api/fitbit/auth";
-  };
-
   const handleToggleVisibility = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -492,16 +488,6 @@ export default function AddEntry({
                 Время засыпания и пробуждения: {watch("sleepTime")} -{" "}
                 {watch("wakeTime")}
               </Label>
-              {!isFitbitConnected && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFitbitConnect}
-                >
-                  Подключить Fitbit
-                </Button>
-              )}
             </div>
             <RangeSlider
               value={[
