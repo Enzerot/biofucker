@@ -51,7 +51,10 @@ export async function exchangeCodeForTokens(
   }
 
   const data = await response.json();
-  console.log("WHOOP token exchange success, got tokens");
+  console.log(
+    "WHOOP token exchange success, full response:",
+    JSON.stringify(data)
+  );
   return {
     ...data,
     expires_at: Date.now() + data.expires_in * 1000,

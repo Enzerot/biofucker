@@ -128,7 +128,7 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
   const accessToken = cookieStore.get("whoop_access_token")?.value;
   const refreshToken = cookieStore.get("whoop_refresh_token")?.value;
 
-  if (!accessToken || !refreshToken) {
+  if (!accessToken) {
     return NextResponse.json({
       startTime: null,
       endTime: null,
@@ -141,7 +141,7 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
   let currentAccessToken = accessToken;
   let sleepData = await getWhoopSleepData(date, currentAccessToken);
 
-  if (!sleepData) {
+  if (!sleepData && refreshToken) {
     try {
       const newTokens = await refreshWhoopTokens(refreshToken);
       currentAccessToken = newTokens.access_token;
@@ -152,23 +152,18 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 30,
       });
-      cookieStore.set("whoop_refresh_token", newTokens.refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      if (newTokens.refresh_token) {
+        cookieStore.set("whoop_refresh_token", newTokens.refresh_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 30,
+        });
+      }
 
       sleepData = await getWhoopSleepData(date, currentAccessToken);
     } catch (error) {
       console.error("Error refreshing Whoop token:", error);
-      return NextResponse.json({
-        startTime: null,
-        endTime: null,
-        efficiency: null,
-        source: "whoop",
-        error: "Failed to refresh token",
-      });
     }
   }
 

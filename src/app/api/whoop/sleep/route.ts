@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const accessToken = cookieStore.get("whoop_access_token")?.value;
     const refreshToken = cookieStore.get("whoop_refresh_token")?.value;
 
-    if (!accessToken || !refreshToken) {
+    if (!accessToken) {
       return NextResponse.json(
         { error: "Not authenticated with Whoop" },
         { status: 401 }
@@ -26,10 +26,9 @@ export async function GET(request: NextRequest) {
     }
 
     let currentAccessToken = accessToken;
-
     let sleepData = await getSleepData(date, currentAccessToken);
 
-    if (!sleepData) {
+    if (!sleepData && refreshToken) {
       try {
         const newTokens = await refreshTokens(refreshToken);
         currentAccessToken = newTokens.access_token;
@@ -40,20 +39,18 @@ export async function GET(request: NextRequest) {
           sameSite: "lax",
           maxAge: 60 * 60 * 24 * 30,
         });
-        cookieStore.set("whoop_refresh_token", newTokens.refresh_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 30,
-        });
+        if (newTokens.refresh_token) {
+          cookieStore.set("whoop_refresh_token", newTokens.refresh_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 30,
+          });
+        }
 
         sleepData = await getSleepData(date, currentAccessToken);
       } catch (error) {
         console.error("Error refreshing token:", error);
-        return NextResponse.json(
-          { error: "Failed to refresh token" },
-          { status: 401 }
-        );
       }
     }
 
@@ -75,4 +72,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
