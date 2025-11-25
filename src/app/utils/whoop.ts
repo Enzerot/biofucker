@@ -1,4 +1,8 @@
-import { WhoopSleepData, WhoopTokens, WhoopSleepCollection } from "../types/whoop";
+import {
+  WhoopSleepData,
+  WhoopTokens,
+  WhoopSleepCollection,
+} from "../types/whoop";
 
 const WHOOP_CLIENT_ID = process.env.NEXT_PUBLIC_WHOOP_CLIENT_ID;
 const WHOOP_CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
@@ -6,7 +10,9 @@ const WHOOP_CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
 export async function getWhoopAuthUrl() {
   const scope = "read:sleep read:profile";
   const redirectUri = `${process.env.BASE_URL}/api/whoop/callback`;
-  const state = `whoop_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  const state = `whoop_${Date.now()}_${Math.random()
+    .toString(36)
+    .substring(2, 15)}`;
 
   return `https://api.prod.whoop.com/oauth/oauth2/auth?response_type=code&client_id=${WHOOP_CLIENT_ID}&redirect_uri=${encodeURIComponent(
     redirectUri
@@ -17,25 +23,35 @@ export async function exchangeCodeForTokens(
   code: string
 ): Promise<WhoopTokens> {
   const redirectUri = `${process.env.BASE_URL}/api/whoop/callback`;
-  const response = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      client_id: WHOOP_CLIENT_ID || "",
-      client_secret: WHOOP_CLIENT_SECRET || "",
-    }),
-  });
+
+  console.log("WHOOP token exchange - redirectUri:", redirectUri);
+  console.log("WHOOP token exchange - client_id:", WHOOP_CLIENT_ID);
+
+  const response = await fetch(
+    "https://api.prod.whoop.com/oauth/oauth2/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: WHOOP_CLIENT_ID || "",
+        client_secret: WHOOP_CLIENT_SECRET || "",
+      }),
+    }
+  );
 
   if (!response.ok) {
-    throw new Error("Failed to exchange code for tokens");
+    const errorText = await response.text();
+    console.error("WHOOP token exchange failed:", response.status, errorText);
+    throw new Error(`Failed to exchange code for tokens: ${errorText}`);
   }
 
   const data = await response.json();
+  console.log("WHOOP token exchange success, got tokens");
   return {
     ...data,
     expires_at: Date.now() + data.expires_in * 1000,
@@ -45,18 +61,21 @@ export async function exchangeCodeForTokens(
 export async function refreshTokens(
   refresh_token: string
 ): Promise<WhoopTokens> {
-  const response = await fetch("https://api.prod.whoop.com/oauth/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token,
-      client_id: WHOOP_CLIENT_ID || "",
-      client_secret: WHOOP_CLIENT_SECRET || "",
-    }),
-  });
+  const response = await fetch(
+    "https://api.prod.whoop.com/oauth/oauth2/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token,
+        client_id: WHOOP_CLIENT_ID || "",
+        client_secret: WHOOP_CLIENT_SECRET || "",
+      }),
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to refresh token");
@@ -108,4 +127,3 @@ export async function getSleepData(
     return null;
   }
 }
-

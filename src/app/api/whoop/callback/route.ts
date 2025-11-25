@@ -9,12 +9,20 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get("code");
 
     if (error) {
-      console.error("WHOOP OAuth error:", error, searchParams.get("error_description"));
-      return NextResponse.redirect(new URL("/integrations?error=whoop_auth_failed", request.url));
+      console.error(
+        "WHOOP OAuth error:",
+        error,
+        searchParams.get("error_description")
+      );
+      return NextResponse.redirect(
+        new URL("/integrations?error=whoop_auth_failed", request.url)
+      );
     }
 
     if (!code) {
-      return NextResponse.redirect(new URL("/integrations?error=no_code", request.url));
+      return NextResponse.redirect(
+        new URL("/integrations?error=no_code", request.url)
+      );
     }
 
     const tokens = await exchangeCodeForTokens(code);
@@ -36,10 +44,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/integrations", request.url));
   } catch (error) {
     console.error("Error handling Whoop callback:", error);
-    return NextResponse.json(
-      { error: "Failed to handle Whoop callback" },
-      { status: 500 }
+    return NextResponse.redirect(
+      new URL("/integrations?error=whoop_token_exchange_failed", request.url)
     );
   }
 }
-
