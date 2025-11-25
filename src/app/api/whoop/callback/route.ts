@@ -5,13 +5,16 @@ import { cookies } from "next/headers";
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const error = searchParams.get("error");
     const code = searchParams.get("code");
 
+    if (error) {
+      console.error("WHOOP OAuth error:", error, searchParams.get("error_description"));
+      return NextResponse.redirect(new URL("/integrations?error=whoop_auth_failed", request.url));
+    }
+
     if (!code) {
-      return NextResponse.json(
-        { error: "No authorization code provided" },
-        { status: 400 }
-      );
+      return NextResponse.redirect(new URL("/integrations?error=no_code", request.url));
     }
 
     const tokens = await exchangeCodeForTokens(code);

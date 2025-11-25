@@ -6,10 +6,11 @@ const WHOOP_CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
 export async function getWhoopAuthUrl() {
   const scope = "read:sleep read:profile";
   const redirectUri = `${process.env.BASE_URL}/api/whoop/callback`;
+  const state = `whoop_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
   return `https://api.prod.whoop.com/oauth/oauth2/auth?response_type=code&client_id=${WHOOP_CLIENT_ID}&redirect_uri=${encodeURIComponent(
     redirectUri
-  )}&scope=${encodeURIComponent(scope)}&state=whoop`;
+  )}&scope=${encodeURIComponent(scope)}&state=${state}`;
 }
 
 export async function exchangeCodeForTokens(
