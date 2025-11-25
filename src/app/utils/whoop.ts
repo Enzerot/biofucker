@@ -8,7 +8,7 @@ const WHOOP_CLIENT_ID = process.env.NEXT_PUBLIC_WHOOP_CLIENT_ID;
 const WHOOP_CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET;
 
 export async function getWhoopAuthUrl() {
-  const scope = "read:sleep read:profile";
+  const scope = "offline read:sleep read:profile";
   const redirectUri = `${process.env.BASE_URL}/api/whoop/callback`;
   const state = `whoop_${Date.now()}_${Math.random()
     .toString(36)

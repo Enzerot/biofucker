@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const accessToken = cookieStore.get("whoop_access_token")?.value;
     const refreshToken = cookieStore.get("whoop_refresh_token")?.value;
 
-    if (!accessToken) {
+    if (!accessToken || !refreshToken) {
       return NextResponse.json(
         { error: "Not authenticated with Whoop" },
         { status: 401 }
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     let currentAccessToken = accessToken;
     let sleepData = await getSleepData(date, currentAccessToken);
 
-    if (!sleepData && refreshToken) {
+    if (!sleepData) {
       try {
         const newTokens = await refreshTokens(refreshToken);
         currentAccessToken = newTokens.access_token;

@@ -18,7 +18,7 @@ export async function GET() {
     cookieStore.get("fitbit_refresh_token")?.value
   );
   
-  const whoopConnected = !!whoopAccessToken;
+  const whoopConnected = !!(whoopAccessToken && whoopRefreshToken);
 
   return NextResponse.json({
     activeSource,

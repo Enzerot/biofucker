@@ -128,7 +128,7 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
   const accessToken = cookieStore.get("whoop_access_token")?.value;
   const refreshToken = cookieStore.get("whoop_refresh_token")?.value;
 
-  if (!accessToken) {
+  if (!accessToken || !refreshToken) {
     return NextResponse.json({
       startTime: null,
       endTime: null,
@@ -141,7 +141,7 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
   let currentAccessToken = accessToken;
   let sleepData = await getWhoopSleepData(date, currentAccessToken);
 
-  if (!sleepData && refreshToken) {
+  if (!sleepData) {
     try {
       const newTokens = await refreshWhoopTokens(refreshToken);
       currentAccessToken = newTokens.access_token;
