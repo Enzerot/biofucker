@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens } from "@/app/utils/fitbit";
-import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,36 +7,31 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get("code");
 
     if (!code) {
-      return NextResponse.json(
-        { error: "No authorization code provided" },
-        { status: 400 }
-      );
+      return NextResponse.redirect(new URL("/integrations?error=no_code", request.url));
     }
 
     const tokens = await exchangeCodeForTokens(code);
 
-    // Сохраняем токены в куки
-    const cookieStore = await cookies();
-    cookieStore.set("fitbit_access_token", tokens.access_token, {
+    const response = NextResponse.redirect(new URL("/integrations", request.url));
+    
+    response.cookies.set("fitbit_access_token", tokens.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 дней
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
     });
-    cookieStore.set("fitbit_refresh_token", tokens.refresh_token, {
+    response.cookies.set("fitbit_refresh_token", tokens.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 дней
+      maxAge: 60 * 60 * 24 * 30,
+      path: "/",
     });
 
-    // Редирект обратно на главную страницу
-    return NextResponse.redirect(new URL("/", request.url));
+    return response;
   } catch (error) {
     console.error("Error handling Fitbit callback:", error);
-    return NextResponse.json(
-      { error: "Failed to handle Fitbit callback" },
-      { status: 500 }
-    );
+    return NextResponse.redirect(new URL("/integrations?error=fitbit_auth_failed", request.url));
   }
 }

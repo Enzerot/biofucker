@@ -7,15 +7,18 @@ export async function GET() {
   const cookieStore = await cookies();
   const activeSource = (cookieStore.get("active_sleep_source")?.value as SleepSource) || "none";
   
+  const whoopAccessToken = cookieStore.get("whoop_access_token")?.value;
+  const whoopRefreshToken = cookieStore.get("whoop_refresh_token")?.value;
+  
+  console.log("Integrations status - whoop_access_token exists:", !!whoopAccessToken);
+  console.log("Integrations status - whoop_refresh_token exists:", !!whoopRefreshToken);
+  
   const fitbitConnected = !!(
     cookieStore.get("fitbit_access_token")?.value && 
     cookieStore.get("fitbit_refresh_token")?.value
   );
   
-  const whoopConnected = !!(
-    cookieStore.get("whoop_access_token")?.value && 
-    cookieStore.get("whoop_refresh_token")?.value
-  );
+  const whoopConnected = !!(whoopAccessToken && whoopRefreshToken);
 
   return NextResponse.json({
     activeSource,

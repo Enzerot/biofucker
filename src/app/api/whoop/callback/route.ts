@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens } from "@/app/utils/whoop";
-import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,21 +26,37 @@ export async function GET(request: NextRequest) {
 
     const tokens = await exchangeCodeForTokens(code);
 
-    const cookieStore = await cookies();
-    cookieStore.set("whoop_access_token", tokens.access_token, {
+    console.log(
+      "WHOOP callback - tokens received, access_token length:",
+      tokens.access_token?.length
+    );
+    console.log(
+      "WHOOP callback - refresh_token exists:",
+      !!tokens.refresh_token
+    );
+
+    const response = NextResponse.redirect(
+      new URL("/integrations", request.url)
+    );
+
+    response.cookies.set("whoop_access_token", tokens.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30,
+      path: "/",
     });
-    cookieStore.set("whoop_refresh_token", tokens.refresh_token, {
+    response.cookies.set("whoop_refresh_token", tokens.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30,
+      path: "/",
     });
 
-    return NextResponse.redirect(new URL("/integrations", request.url));
+    console.log("WHOOP callback - cookies set on response");
+
+    return response;
   } catch (error) {
     console.error("Error handling Whoop callback:", error);
     return NextResponse.redirect(
