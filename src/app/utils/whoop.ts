@@ -65,7 +65,7 @@ export async function refreshTokens(
   refresh_token: string
 ): Promise<WhoopTokens> {
   console.log("WHOOP refreshing token...");
-  
+
   const response = await fetch(
     "https://api.prod.whoop.com/oauth/oauth2/token",
     {
@@ -111,7 +111,7 @@ export async function getSleepData(
       end: endDate.toISOString(),
     });
 
-    const url = `https://api.prod.whoop.com/developer/v1/activity/sleep?${params}`;
+    const url = `https://api.prod.whoop.com/developer/v2/activity/sleep?${params}`;
     console.log("WHOOP sleep request URL:", url);
 
     const response = await fetch(url, {

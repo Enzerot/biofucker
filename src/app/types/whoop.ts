@@ -1,5 +1,6 @@
 export interface WhoopSleepData {
-  id: number;
+  id: string;
+  cycle_id: number;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -45,5 +46,3 @@ export interface WhoopTokens {
   token_type: string;
   scope: string;
 }
-
-
