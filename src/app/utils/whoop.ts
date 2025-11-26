@@ -64,6 +64,8 @@ export async function exchangeCodeForTokens(
 export async function refreshTokens(
   refresh_token: string
 ): Promise<WhoopTokens> {
+  console.log("WHOOP refreshing token...");
+  
   const response = await fetch(
     "https://api.prod.whoop.com/oauth/oauth2/token",
     {
@@ -81,10 +83,13 @@ export async function refreshTokens(
   );
 
   if (!response.ok) {
-    throw new Error("Failed to refresh token");
+    const errorText = await response.text();
+    console.error("WHOOP refresh token error:", response.status, errorText);
+    throw new Error(`Failed to refresh token: ${errorText}`);
   }
 
   const data = await response.json();
+  console.log("WHOOP token refreshed successfully");
   return {
     ...data,
     expires_at: Date.now() + data.expires_in * 1000,
@@ -106,23 +111,28 @@ export async function getSleepData(
       end: endDate.toISOString(),
     });
 
-    const response = await fetch(
-      `https://api.prod.whoop.com/developer/v1/activity/sleep?${params}`,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
-    );
+    const url = `https://api.prod.whoop.com/developer/v1/activity/sleep?${params}`;
+    console.log("WHOOP sleep request URL:", url);
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    console.log("WHOOP sleep response status:", response.status);
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("WHOOP sleep error response:", errorText);
       if (response.status === 401) {
         return null;
       }
-      throw new Error("Failed to fetch sleep data");
+      throw new Error(`Failed to fetch sleep data: ${response.status}`);
     }
 
     const data: WhoopSleepCollection = await response.json();
+    console.log("WHOOP sleep data records count:", data.records?.length || 0);
     const sleepRecord = data.records.find((r) => !r.nap);
     return sleepRecord || null;
   } catch (error) {
