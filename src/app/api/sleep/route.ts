@@ -176,9 +176,25 @@ async function handleWhoopSleep(date: string, cookieStore: Awaited<ReturnType<ty
     } as SleepResponse);
   }
 
+  const applyTimezoneOffset = (isoString: string, offset: string): string => {
+    const date = new Date(isoString);
+    const match = offset.match(/([+-])(\d{2}):(\d{2})/);
+    if (match) {
+      const sign = match[1] === "+" ? 1 : -1;
+      const hours = parseInt(match[2], 10);
+      const minutes = parseInt(match[3], 10);
+      const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+      return new Date(date.getTime() + offsetMs).toISOString();
+    }
+    return isoString;
+  };
+
+  const startTime = applyTimezoneOffset(sleepData.start, sleepData.timezone_offset);
+  const endTime = applyTimezoneOffset(sleepData.end, sleepData.timezone_offset);
+
   return NextResponse.json({
-    startTime: sleepData.start,
-    endTime: sleepData.end,
+    startTime,
+    endTime,
     efficiency: sleepData.score?.sleep_efficiency_percentage || null,
     source: "whoop",
   } as SleepResponse);
